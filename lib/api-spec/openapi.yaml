@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: video
+    description: Video downloader operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,71 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /info:
+    post:
+      operationId: getVideoInfo
+      tags: [video]
+      summary: Get video metadata
+      description: Fetch video title, thumbnail, duration, platform, and available formats
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VideoUrlInput"
+      responses:
+        "200":
+          description: Video metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VideoInfo"
+        "400":
+          description: Invalid URL or unsupported platform
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /download:
+    post:
+      operationId: getDownloadLink
+      tags: [video]
+      summary: Get download link for a video
+      description: Get a direct download URL for the selected format
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DownloadInput"
+      responses:
+        "200":
+          description: Download link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DownloadResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +101,87 @@ components:
       required:
         - status
 
+    VideoUrlInput:
+      type: object
+      properties:
+        url:
+          type: string
+          description: The video URL to fetch info for
+      required:
+        - url
+
+    VideoFormat:
+      type: object
+      properties:
+        quality:
+          type: string
+          description: "e.g. 360p, 720p, 1080p, mp3"
+        format:
+          type: string
+          description: "e.g. mp4, mp3"
+        label:
+          type: string
+          description: Human-readable label
+      required:
+        - quality
+        - format
+        - label
+
+    VideoInfo:
+      type: object
+      properties:
+        title:
+          type: string
+        thumbnail:
+          type: string
+          description: Thumbnail URL
+        duration:
+          type: string
+          description: Duration in HH:MM:SS or MM:SS format
+        platform:
+          type: string
+          description: Platform name (YouTube, Instagram, etc.)
+        formats:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoFormat"
+      required:
+        - title
+        - thumbnail
+        - duration
+        - platform
+        - formats
+
+    DownloadInput:
+      type: object
+      properties:
+        url:
+          type: string
+          description: The video URL
+        format:
+          type: string
+          description: "Format key: 360p, 720p, 1080p, or mp3"
+      required:
+        - url
+        - format
+
+    DownloadResult:
+      type: object
+      properties:
+        downloadUrl:
+          type: string
+          description: Direct download URL
+        filename:
+          type: string
+          description: Suggested filename
+      required:
+        - downloadUrl
+        - filename
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
