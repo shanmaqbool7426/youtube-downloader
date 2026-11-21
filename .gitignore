@@ -49,6 +49,4 @@ temp_interactive_push.bat
 config.bat
 
 # Environment files
-.env
-.env.*
 !.env.example

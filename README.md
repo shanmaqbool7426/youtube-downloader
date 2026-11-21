@@ -19,12 +19,12 @@ Install Node.js 24, pnpm 11.25.0, FFmpeg and ffprobe, and yt-dlp with the EJS pa
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm run build
-pnpm test
-pnpm start
+npm run dev
 ```
 
-Open [http://localhost:5000](http://localhost:5000). For frontend hot reload, keep the API running and run `pnpm --filter @workspace/vidsnap dev` in a second terminal to open [http://localhost:5173](http://localhost:5173). Local Windows development can use WSL or Docker.
+Open [http://localhost:5173](http://localhost:5173). The command starts Vite with frontend hot reload and the API on port 5000. Restart the command after changing server code. For Windows development, run these commands in WSL.
+
+To test the production build locally, run `pnpm run build` followed by `pnpm test`. Run `pnpm start` to serve the built app at [http://localhost:5000](http://localhost:5000).
 
 ## Deploy and operate
 
