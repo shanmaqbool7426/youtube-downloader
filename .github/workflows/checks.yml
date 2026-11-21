@@ -28,5 +28,5 @@ jobs:
             --tmpfs /tmp:rw,noexec,nosuid,size=2g,mode=1777 \
             -p 127.0.0.1:8080:8080 vidsnap
           trap 'docker logs vidsnap; docker rm -f vidsnap' EXIT
-          curl --fail --retry 10 --retry-connrefused --retry-delay 2 http://127.0.0.1:8080/api/healthz
+          curl --fail --retry 15 --retry-all-errors --retry-delay 2 --max-time 5 http://127.0.0.1:8080/api/healthz
           curl --fail --silent http://127.0.0.1:8080/ | grep -q 'VidSnap'
