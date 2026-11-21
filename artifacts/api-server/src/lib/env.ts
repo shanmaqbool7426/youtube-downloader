@@ -44,6 +44,15 @@ export const env = {
    * Set YTDLP_JS_RUNTIME= to disable.
    */
   ytdlpJsRuntime: str("YTDLP_JS_RUNTIME", "node"),
+  /**
+   * Netscape-format cookies.txt from a signed-in YouTube session. Datacenter
+   * IPs (Render, Railway, …) get "Failed to extract any player response" /
+   * "confirm you're not a bot" without them. On Render, add a Secret File
+   * named cookies.txt and set this to /etc/secrets/cookies.txt.
+   */
+  ytdlpCookiesFile: str("YTDLP_COOKIES_FILE", ""),
+  /** Raw --extractor-args value, e.g. "youtube:player_client=tv,web_safari". */
+  ytdlpExtractorArgs: str("YTDLP_EXTRACTOR_ARGS", ""),
 
   /** General API rate limit (per IP). */
   rateLimitMax: num("RATE_LIMIT_MAX", 120),

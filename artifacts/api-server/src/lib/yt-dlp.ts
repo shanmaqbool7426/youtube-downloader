@@ -1,9 +1,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
+import os from "node:os";
 import path from "node:path";
+import { copyFileSync, existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { create as createYtDlp } from "yt-dlp-exec";
 import { env } from "./env";
+import { logger } from "./logger";
 import { acquireSlot } from "./concurrency";
 
 /** Flags the bundled yt-dlp type declaration doesn't know about. */
@@ -64,9 +67,29 @@ export interface RawVideoInfo {
  * Note: we deliberately keep yt-dlp's default user agent — overriding it with a
  * bot UA (e.g. googlebot) makes some YouTube player endpoints hang forever.
  */
+/**
+ * yt-dlp writes the cookie jar back on exit, and Render's /etc/secrets is
+ * read-only, so work from a private writable copy made once at startup.
+ */
+function prepareCookiesFile(): string | null {
+  const source = env.ytdlpCookiesFile;
+  if (!source) return null;
+  if (!existsSync(source)) {
+    logger.warn({ source }, "YTDLP_COOKIES_FILE does not exist; continuing without cookies");
+    return null;
+  }
+  const copy = path.join(os.tmpdir(), "yt-dlp-cookies.txt");
+  copyFileSync(source, copy);
+  logger.info("yt-dlp will use the configured YouTube cookies");
+  return copy;
+}
+
+const cookiesPath = prepareCookiesFile();
+
+// Warnings are kept (no --no-warnings): when extraction fails they end up in
+// the logged error and usually name the real cause (bot check, sign-in, …).
 const SPEED_FLAGS = {
   noCheckCertificate: true,
-  noWarnings: true,
   concurrentFragments: 8,
   fragmentRetries: 10,
   retries: 10,
@@ -75,6 +98,8 @@ const SPEED_FLAGS = {
   noPart: true,
   ...(env.ytdlpImpersonate ? { impersonate: env.ytdlpImpersonate } : {}),
   ...(env.ytdlpJsRuntime ? { jsRuntimes: env.ytdlpJsRuntime } : {}),
+  ...(cookiesPath ? { cookies: cookiesPath } : {}),
+  ...(env.ytdlpExtractorArgs ? { extractorArgs: env.ytdlpExtractorArgs } : {}),
 } as unknown as YtFlags;
 
 /** Fetch the full metadata JSON for one video (bounded by a hard timeout). */
@@ -116,6 +141,8 @@ function speedArgs(): string[] {
     "--quiet",
   ];
   if (env.ytdlpImpersonate) args.push("--impersonate", env.ytdlpImpersonate);
+  if (cookiesPath) args.push("--cookies", cookiesPath);
+  if (env.ytdlpExtractorArgs) args.push("--extractor-args", env.ytdlpExtractorArgs);
   return args;
 }
 
