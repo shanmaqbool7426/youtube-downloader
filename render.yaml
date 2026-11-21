@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: hd-grab
+    runtime: docker
+    plan: free
+    branch: render-deploy
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      # The free instance has 512 MB RAM; each merged download runs two yt-dlp
+      # processes plus ffmpeg, so keep parallel work low.
+      - key: YTDLP_MAX_CONCURRENT
+        value: "2"
