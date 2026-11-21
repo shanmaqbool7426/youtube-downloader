@@ -108,8 +108,15 @@ export function availableFormats(formats: MediaFormat[]) {
   return options;
 }
 
-export async function getMetadata(source: ReturnType<typeof parseSource>, signal: AbortSignal) {
-  const output = await runYtDlp(source, ["--dump-single-json", "--skip-download", "--playlist-items", "1"], signal, 25_000);
+function manifestArguments(skipHls: boolean) {
+  return skipHls ? ["--extractor-args", "youtube:skip=hls"] : [];
+}
+
+async function readMetadata(source: ReturnType<typeof parseSource>, signal: AbortSignal, skipHls: boolean) {
+  const output = await runYtDlp(source, [
+    "--dump-single-json", "--skip-download", "--playlist-items", "1",
+    "--ignore-no-formats-error", ...manifestArguments(skipHls),
+  ], signal, 25_000);
   const metadata = JSON.parse(output) as Metadata;
 
   if (metadata._type === "playlist" || metadata._type === "multi_video") {
@@ -120,14 +127,24 @@ export async function getMetadata(source: ReturnType<typeof parseSource>, signal
     throw new MediaError(422, "Choose a recorded video that is 30 minutes or shorter.");
   }
   const options = availableFormats(metadata.formats ?? []);
-  if (!options.length) throw new MediaError(422, "This video has no supported download formats.");
   return {
     title: metadata.title || "Untitled video",
     thumbnail: metadata.thumbnail?.startsWith("https://") ? metadata.thumbnail : "",
     duration: new Date(Math.floor(metadata.duration) * 1000).toISOString().slice(11, 19).replace(/^00:/, ""),
     platform: source.platform.name,
     options,
+    skipHls,
   };
+}
+
+export async function getMetadata(source: ReturnType<typeof parseSource>, signal: AbortSignal) {
+  const fast = await readMetadata(source, signal, source.platform.name === "YouTube");
+  // Most recorded YouTube videos expose direct formats without an HLS manifest request.
+  const metadata = fast.skipHls && !fast.options.length
+    ? await readMetadata(source, signal, false)
+    : fast;
+  if (!metadata.options.length) throw new MediaError(422, "This video has no supported download formats.");
+  return metadata;
 }
 
 export async function prepareMedia(
@@ -135,6 +152,7 @@ export async function prepareMedia(
   option: ReturnType<typeof availableFormats>[number],
   directory: string,
   signal: AbortSignal,
+  skipHls: boolean,
 ) {
   const params = option.format === "mp3"
     ? ["--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
@@ -144,7 +162,7 @@ export async function prepareMedia(
     "--format", option.selector, "--output", join(directory, "media.%(ext)s"),
     "--max-filesize", String(maxBytes), "--match-filters", `duration <= ${maxDuration} & !is_live`,
     "--concurrent-fragments", "4", "--abort-on-unavailable-fragments",
-    ...params,
+    ...manifestArguments(skipHls), ...params,
   ], signal, 180_000, directory);
   const file = await stat(outputPath).catch(() => undefined);
   if (!file?.isFile() || file.size === 0 || file.size > maxBytes) {
@@ -170,7 +188,7 @@ function runYtDlp(
       "--socket-timeout", "10", "--retries", "2", "--fragment-retries", "2",
       "--extractor-retries", "1", "--no-progress", ...args, "--", source.url,
     ], {
-      stdio: ["ignore", "pipe", "ignore"],
+      stdio: ["ignore", "pipe", "pipe"],
       // A process group lets cancellation stop both yt-dlp and its FFmpeg subprocess.
       detached: process.platform !== "win32",
       env: {
@@ -188,6 +206,7 @@ function runYtDlp(
     });
     const chunks: Buffer[] = [];
     let bytes = 0;
+    let stderr = "";
     let failure: Error | undefined;
     let checking = false;
     function stop(error: Error) {
@@ -224,6 +243,8 @@ function runYtDlp(
       if (bytes > 8 * 1024 * 1024) stop(new MediaError(422, "This video returned too much metadata."));
       else chunks.push(chunk);
     });
+    child.stderr.setEncoding("utf8");
+    child.stderr.on("data", (chunk: string) => { stderr = (stderr + chunk).slice(-8192); });
     child.on("error", () => {
       failure ??= new MediaError(503, "The media service is unavailable. Try again later.");
     });
@@ -232,8 +253,12 @@ function runYtDlp(
       if (sizeCheck) clearInterval(sizeCheck);
       signal.removeEventListener("abort", abort);
       if (failure) reject(failure);
-      else if (code !== 0) reject(new MediaError(502, "The source couldn’t provide this video. Check that it’s public and try again."));
-      else resolve(Buffer.concat(chunks).toString("utf8"));
+      else if (code !== 0) {
+        const message = /HTTP Error (403|429)|sign in to confirm/i.test(stderr)
+          ? "The source site blocked this request. Try another public video."
+          : "The source couldn’t provide this video. Check that it’s public and try again.";
+        reject(new MediaError(502, message));
+      } else resolve(Buffer.concat(chunks).toString("utf8"));
     });
   });
 }

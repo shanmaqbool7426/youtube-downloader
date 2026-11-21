@@ -85,6 +85,9 @@ test("VidSnap serves compatible media attachments with bounded preparation", { t
     assert.equal((await range.arrayBuffer()).byteLength, 16);
   }
   assert.equal((await fetch(origin + "/api/file?token=unknown")).status, 404);
+  const blocked = await post("/api/download", { url: "https://youtu.be/blocked1234", format: "720p" });
+  assert.equal(blocked.status, 502);
+  assert.match((await blocked.json()).error, /source site blocked/);
 
   const controller = new AbortController();
   const stalled = post("/api/download", { url: "https://youtu.be/slow1234567", format: "720p" }, { signal: controller.signal });
@@ -97,4 +100,6 @@ test("VidSnap serves compatible media attachments with bounded preparation", { t
   await abortion;
   for (let attempt = 0; attempt < 100 && (await readdir(join(temp, root))).length > 2; attempt++) await delay(20);
   assert.equal((await readdir(join(temp, root))).length, 2);
+  const fallback = await post("/api/download", { url: "https://youtu.be/hls12345678", format: "720p" });
+  assert.equal(fallback.status, 200);
 });

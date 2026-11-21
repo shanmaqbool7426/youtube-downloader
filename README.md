@@ -28,7 +28,7 @@ Open [http://localhost:5000](http://localhost:5000). For frontend hot reload, ke
 
 ## Deploy and operate
 
-- Run one instance of the container behind HTTPS and use `GET /api/healthz` for health checks. Configure the upstream proxy to allow at least 220 seconds for a download preparation request.
+- Run one instance of the container behind HTTPS and use `GET /api/healthz` for health checks. Configure the upstream proxy to allow at least 240 seconds for a download preparation request.
 - Keep the app port private when using a proxy. Set `TRUST_PROXY=1` only with exactly one trusted reverse proxy that overwrites incoming forwarded headers. Restrict outbound connections to public destinations at the deployment network layer. Block access to internal networks and cloud metadata services.
 - Allocate at least 2 GB to temporary media storage. The container uses `/tmp` by default. For native deployments, use a dedicated, size-limited volume via `MEDIA_TEMP_DIR`. The service prepares two files at a time, one per IP. Prepared files stay on the instance for up to ten minutes and older unused files may be removed sooner under load. A restart invalidates save links. Use one replica unless storage and job coordination are moved to shared services.
 - Public, recorded individual videos are limited to 30 minutes and 128 MB. Source sites can restrict links by IP, region, login, or availability. After deployment, test a public video you own or have permission to download from each platform you intend to support. Keep yt-dlp and its EJS package updated together and repeat those checks after every update.

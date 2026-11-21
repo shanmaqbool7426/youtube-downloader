@@ -10,7 +10,7 @@ if (args.includes("--dump-single-json")) {
   console.log(JSON.stringify({
     title: "VidSnap test clip",
     duration: 1,
-    formats: [
+    formats: source.searchParams.get("v") === "hls12345678" && args.includes("youtube:skip=hls") ? [] : [
       { format_id: "audio", vcodec: "none", acodec: "mp4a.40.2", ext: "m4a" },
       { format_id: "small", height: 360, width: 640, vcodec: "avc1", acodec: "mp4a.40.2", ext: "mp4" },
       { format_id: "medium", height: 720, width: 1280, vcodec: "avc1", acodec: "none", ext: "mp4" },
@@ -21,9 +21,14 @@ if (args.includes("--dump-single-json")) {
   process.exit(0);
 }
 
+if (source.searchParams.get("v") === "blocked1234") {
+  console.error("ERROR: unable to download video data: HTTP Error 403: Forbidden");
+  process.exit(1);
+}
 if (source.searchParams.get("v") === "slow1234567") {
   await new Promise((resolve) => setTimeout(resolve, 30_000));
 }
+if (source.searchParams.get("v") === "hls12345678" && args.includes("youtube:skip=hls")) process.exit(1);
 const output = args[args.indexOf("--output") + 1];
 const selector = args[args.indexOf("--format") + 1];
 if (args.includes("--extract-audio") && args.includes("mp3") && selector === "audio") {

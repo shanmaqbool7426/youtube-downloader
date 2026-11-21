@@ -124,8 +124,8 @@ router.post("/info", async (req, res) => {
   try {
     const input = GetVideoInfoBody.safeParse(req.body);
     if (!input.success) throw new MediaError(400, "Paste a public video link to continue.");
-    const { options, ...video } = await lookup(parseSource(input.data.url), requestSignal(res));
-    res.json({ ...video, formats: options.map(({ quality, format, label }) => ({ quality, format, label })) });
+    const { title, thumbnail, duration, platform, options } = await lookup(parseSource(input.data.url), requestSignal(res));
+    res.json({ title, thumbnail, duration, platform, formats: options.map(({ quality, format, label }) => ({ quality, format, label })) });
   } catch (error) {
     sendError(req, res, error);
   }
@@ -157,7 +157,7 @@ router.post("/download", async (req, res) => {
     }
 
     directory = await mkdtemp(join(await initializeMediaStorage(), "file-"));
-    const path = await prepareMedia(source, option, directory, signal);
+    const path = await prepareMedia(source, option, directory, signal, video.skipHls);
     signal.throwIfAborted();
     const title = Array.from(video.title.replace(/[^\p{L}\p{N} _-]/gu, " ").trim()).slice(0, 70).join("");
     const filename = (title || "VidSnap") + "." + option.format;
