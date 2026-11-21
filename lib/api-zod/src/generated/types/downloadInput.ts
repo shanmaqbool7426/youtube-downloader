@@ -9,6 +9,6 @@
 export interface DownloadInput {
   /** The video URL */
   url: string;
-  /** Format key: 360p, 720p, 1080p, or mp3 */
-  format: string;
+  /** yt-dlp format id (from VideoInfo.formats[].formatId) */
+  formatId: string;
 }

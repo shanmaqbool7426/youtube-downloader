@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "VidSnap"
+title = "HD Grab"
 version = "1.0.0"
 id = "artifacts/vidsnap"
 router = "path"

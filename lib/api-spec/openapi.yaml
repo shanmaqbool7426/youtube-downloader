@@ -60,6 +60,61 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /download:
+    get:
+      operationId: getDownloadFile
+      tags: [video]
+      summary: Download video file
+      description: >
+        Streams the selected format as a real media file (Content-Disposition
+        attachment). Plain yt-dlp format ids pipe directly from the source;
+        synthetic ids `video+audio:<height>` download the video and audio
+        streams in parallel and mux them server-side into one file, and
+        `mp3:<bitrate>` extracts MP3 audio (320/128).
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+            description: The video URL
+        - name: formatId
+          in: query
+          required: true
+          schema:
+            type: string
+            description: "yt-dlp format id from VideoInfo.formats[].formatId; synthetic ids video+audio:<height> and mp3:<bitrate> trigger server-side merge/transcode"
+      responses:
+        "200":
+          description: Media file stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Missing required query parameters or invalid format id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (per IP)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Download queue busy — retry after a few seconds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: getDownloadLink
       tags: [video]
@@ -113,19 +168,30 @@ components:
     VideoFormat:
       type: object
       properties:
+        formatId:
+          type: string
+          description: "yt-dlp format identifier, or synthetic ids video+audio:<height> / mp3:<bitrate> handled by the download endpoint"
+        type:
+          type: string
+          description: "Stream type: progressive (video+audio), video (video only), or audio"
         quality:
           type: string
-          description: "e.g. 360p, 720p, 1080p, mp3"
-        format:
+          description: "Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a)"
+        extension:
           type: string
-          description: "e.g. mp4, mp3"
-        label:
+          description: "Container extension, e.g. mp4, webm, m4a"
+        filesize:
+          type: number
+          nullable: true
+          description: Approximate file size in bytes, if known
+        filename:
           type: string
-          description: Human-readable label
+          description: Suggested file name including extension
       required:
+        - formatId
+        - type
         - quality
-        - format
-        - label
+        - extension
 
     VideoInfo:
       type: object
@@ -158,12 +224,12 @@ components:
         url:
           type: string
           description: The video URL
-        format:
+        formatId:
           type: string
-          description: "Format key: 360p, 720p, 1080p, or mp3"
+          description: "yt-dlp format id (from VideoInfo.formats[].formatId)"
       required:
         - url
-        - format
+        - formatId
 
     DownloadResult:
       type: object

@@ -1,0 +1,102 @@
+[16:01:26.543] [32mINFO[39m (8356): [36mServer listening[39m
+    [35mport[39m: 5000
+[16:02:15.449] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8205
+[16:02:27.519] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 2,
+      "method": "POST",
+      "url": "/api/download"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7045
+[16:10:03.867] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 3,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 11
+[16:10:20.517] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 4,
+      "method": "POST",
+      "url": "/api/download"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7918
+[16:10:50.021] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 5,
+      "method": "POST",
+      "url": "/api/download"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7247
+[16:11:23.995] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 6,
+      "method": "GET",
+      "url": "/api/healthz"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 8
+[16:27:00.023] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 7,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 10632
+[16:27:29.022] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 8,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[16:27:59.746] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 9,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 4
+[16:28:06.137] [32mINFO[39m (8356): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 10,
+      "method": "POST",
+      "url": "/api/info"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 6

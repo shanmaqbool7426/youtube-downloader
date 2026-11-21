@@ -31,11 +31,26 @@ export const GetVideoInfoResponse = zod.object({
   "duration": zod.string().describe('Duration in HH:MM:SS or MM:SS format'),
   "platform": zod.string().describe('Platform name (YouTube, Instagram, etc.)'),
   "formats": zod.array(zod.object({
-  "quality": zod.string().describe('e.g. 360p, 720p, 1080p, mp3'),
-  "format": zod.string().describe('e.g. mp4, mp3'),
-  "label": zod.string().describe('Human-readable label')
+  "formatId": zod.string().describe('yt-dlp format identifier to request on download'),
+  "type": zod.string().describe('Stream type: progressive (video+audio), video (video only), or audio'),
+  "quality": zod.string().describe('Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a)'),
+  "extension": zod.string().describe('Container extension, e.g. mp4, webm, m4a'),
+  "filesize": zod.number().nullish().describe('Approximate file size in bytes, if known'),
+  "filename": zod.string().optional().describe('Suggested file name including extension')
 }))
 })
+
+
+/**
+ * Streams the selected format as a real media file (Content-Disposition attachment). Works for DASH/HLS formats too.
+ * @summary Download video file
+ */
+export const GetDownloadFileQueryParams = zod.object({
+  "url": zod.coerce.string(),
+  "formatId": zod.coerce.string()
+})
+
+export const GetDownloadFileResponse = zod.unknown()
 
 
 /**
@@ -44,7 +59,7 @@ export const GetVideoInfoResponse = zod.object({
  */
 export const GetDownloadLinkBody = zod.object({
   "url": zod.string().describe('The video URL'),
-  "format": zod.string().describe('Format key: 360p, 720p, 1080p, or mp3')
+  "formatId": zod.string().describe('yt-dlp format id (from VideoInfo.formats[].formatId)')
 })
 
 export const GetDownloadLinkResponse = zod.object({

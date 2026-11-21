@@ -23,6 +23,7 @@ import type {
   DownloadInput,
   DownloadResult,
   ErrorResponse,
+  GetDownloadFileParams,
   HealthStatus,
   VideoInfo,
   VideoUrlInput
@@ -204,6 +205,91 @@ export const useGetVideoInfo = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getGetVideoInfoMutationOptions(options));
     }
+
+export const getGetDownloadFileUrl = (params: GetDownloadFileParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/download?${stringifiedParams}` : `/api/download`
+}
+
+/**
+ * Streams the selected format as a real media file (Content-Disposition attachment). Works for DASH/HLS formats too.
+ * @summary Download video file
+ */
+export const getDownloadFile = async (params: GetDownloadFileParams, options?: RequestInit): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetDownloadFileUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDownloadFileQueryKey = (params?: GetDownloadFileParams,) => {
+    return [
+    `/api/download`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetDownloadFileQueryOptions = <TData = Awaited<ReturnType<typeof getDownloadFile>>, TError = ErrorType<ErrorResponse>>(params: GetDownloadFileParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDownloadFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDownloadFileQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDownloadFile>>> = ({ signal }) => getDownloadFile(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDownloadFile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDownloadFileQueryResult = NonNullable<Awaited<ReturnType<typeof getDownloadFile>>>
+export type GetDownloadFileQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Download video file
+ */
+
+export function useGetDownloadFile<TData = Awaited<ReturnType<typeof getDownloadFile>>, TError = ErrorType<ErrorResponse>>(
+ params: GetDownloadFileParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDownloadFile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDownloadFileQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getGetDownloadLinkUrl = () => {
 

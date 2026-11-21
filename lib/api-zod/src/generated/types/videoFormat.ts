@@ -7,10 +7,16 @@
  */
 
 export interface VideoFormat {
-  /** e.g. 360p, 720p, 1080p, mp3 */
+  /** yt-dlp format identifier to request on download */
+  formatId: string;
+  /** Stream type: progressive (video+audio), video (video only), or audio */
+  type: string;
+  /** Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a) */
   quality: string;
-  /** e.g. mp4, mp3 */
-  format: string;
-  /** Human-readable label */
-  label: string;
+  /** Container extension, e.g. mp4, webm, m4a */
+  extension: string;
+  /** Approximate file size in bytes, if known */
+  filesize?: number | null;
+  /** Suggested file name including extension */
+  filename?: string;
 }

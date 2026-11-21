@@ -1,0 +1,17 @@
+{
+  "name": "HD Grab — YouTube Video Downloader 1080p",
+  "short_name": "HD Grab",
+  "description": "Free YouTube downloader for 1080p Full HD, 720p, 4K and MP3 with real file sizes shown before download.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f5",
+  "theme_color": "#e85d27",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

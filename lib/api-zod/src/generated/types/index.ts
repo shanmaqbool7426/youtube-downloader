@@ -9,6 +9,7 @@
 export * from './downloadInput';
 export * from './downloadResult';
 export * from './errorResponse';
+export * from './getDownloadFileParams';
 export * from './healthStatus';
 export * from './videoFormat';
 export * from './videoInfo';
