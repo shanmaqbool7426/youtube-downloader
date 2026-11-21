@@ -64,7 +64,7 @@ paths:
       operationId: getDownloadLink
       tags: [video]
       summary: Get download link for a video
-      description: Get a direct download URL for the selected format
+      description: Prepare a media file and return a temporary same-origin download URL
       requestBody:
         required: true
         content:
@@ -170,7 +170,7 @@ components:
       properties:
         downloadUrl:
           type: string
-          description: Direct download URL
+          description: Temporary same-origin URL for the prepared media file
         filename:
           type: string
           description: Suggested filename

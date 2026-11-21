@@ -23,5 +23,6 @@ from = "/*"
 to = "/index.html"
 
 [services.env]
-PORT = "21921"
-BASE_PATH = "/"
+WEB_PORT = "21921"
+WEB_HOST = "0.0.0.0"
+API_TARGET = "http://127.0.0.1:8080"

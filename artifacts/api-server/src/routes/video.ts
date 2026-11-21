@@ -1,134 +1,200 @@
-import { Router, type IRouter } from "express";
-import { create as createYtDlp } from "yt-dlp-exec";
+import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { Router, type Request, type Response } from "express";
+import { GetDownloadLinkBody, GetVideoInfoBody } from "@workspace/api-zod";
+import { getMetadata, MediaError, parseSource, prepareMedia } from "../lib/media";
 
-// Use the locally downloaded binary; fall back to PATH
-const ytDlp = createYtDlp(process.env["YTDLP_BIN"] ?? "/home/runner/yt-dlp");
-import {
-  GetVideoInfoBody,
-  GetVideoInfoResponse,
-  GetDownloadLinkBody,
-  GetDownloadLinkResponse,
-} from "@workspace/api-zod";
+const router = Router();
+const metadataCache = new Map<string, { expires: number; data: Awaited<ReturnType<typeof getMetadata>> }>();
+const downloads = new Map<string, { path: string; filename: string; expires: number; connections: number }>();
+const requests = new Map<string, { count: number; expires: number }>();
+const activeDownloads = new Set<string>();
+const lifetime = 10 * 60_000;
+let lookupCount = 0;
+let storage: Promise<string> | undefined;
 
-const router: IRouter = Router();
-
-/** Detect platform name from URL */
-function detectPlatform(url: string): string {
-  if (/youtube\.com|youtu\.be/.test(url)) return "YouTube";
-  if (/instagram\.com/.test(url)) return "Instagram";
-  if (/facebook\.com|fb\.watch/.test(url)) return "Facebook";
-  if (/tiktok\.com/.test(url)) return "TikTok";
-  if (/twitter\.com|x\.com/.test(url)) return "Twitter";
-  if (/dailymotion\.com/.test(url)) return "Dailymotion";
-  return "Unknown";
+function removeDownload(token: string, file: { path: string }) {
+  downloads.delete(token);
+  return rm(dirname(file.path), { recursive: true, force: true });
 }
 
-/** Format seconds into MM:SS or HH:MM:SS */
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (h > 0) {
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+async function clearExpired() {
+  const now = Date.now();
+  for (const [key, record] of metadataCache) {
+    if (record.expires <= now) metadataCache.delete(key);
   }
-  return `${m}:${String(s).padStart(2, "0")}`;
+  for (const [key, record] of requests) {
+    if (record.expires <= now) requests.delete(key);
+  }
+  await Promise.all([...downloads].map(([token, file]) =>
+    !file.connections && file.expires <= now ? removeDownload(token, file) : undefined));
 }
 
-/** POST /api/info — get video metadata */
-router.post("/info", async (req, res): Promise<void> => {
-  const parsed = GetVideoInfoBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+const cleanup = setInterval(() => {
+  void clearExpired().catch(() => console.error("Failed to clear expired media files"));
+}, 30_000);
+cleanup.unref();
+
+export async function initializeMediaStorage() {
+  if (!storage) {
+    storage = (async () => {
+      const parent = process.env.MEDIA_TEMP_DIR || tmpdir();
+      await mkdir(parent, { recursive: true });
+      return mkdtemp(join(parent, "vidsnap-"));
+    })();
+  }
+  return storage;
+}
+
+export async function cleanupMediaStorage() {
+  clearInterval(cleanup);
+  if (storage) await rm(await storage, { recursive: true, force: true });
+}
+
+function sendError(req: Request, res: Response, error: unknown) {
+  if (res.destroyed || res.headersSent) return;
+  if (error instanceof MediaError) {
+    if (error.status === 429 || error.status === 503) res.set("Retry-After", "10");
+    res.status(error.status).json({ error: error.message });
+    return;
+  }
+  req.log.error({ errorType: error instanceof Error ? error.name : typeof error }, "Media request failed");
+  res.status(500).json({ error: "Something went wrong. Please try again." });
+}
+
+router.use(["/info", "/download", "/file"], (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  if (req.get("Sec-Fetch-Site") === "cross-site") {
+    res.status(403).json({ error: "Open VidSnap directly to download a file." });
+    return;
+  }
+  if (req.method === "POST" && !req.is("application/json")) {
+    res.status(415).json({ error: "Send a JSON request." });
+    return;
+  }
+  if (req.method !== "POST") {
+    next();
     return;
   }
 
-  const { url } = parsed.data;
+  const key = req.ip ?? "unknown";
+  const now = Date.now();
+  let record = requests.get(key);
+  if (!record || record.expires <= now) {
+    if (requests.size >= 4096) {
+      res.set("Retry-After", "30").status(503).json({ error: "VidSnap is busy. Try again shortly." });
+      return;
+    }
+    record = { count: 0, expires: now + 60_000 };
+    requests.set(key, record);
+  }
+  if (++record.count > 20) {
+    res.set("Retry-After", String(Math.ceil((record.expires - now) / 1000)))
+      .status(429).json({ error: "Too many requests. Wait a moment and try again." });
+    return;
+  }
+  next();
+});
 
+function requestSignal(res: Response) {
+  const controller = new AbortController();
+  res.once("close", () => controller.abort());
+  return controller.signal;
+}
+
+async function lookup(source: ReturnType<typeof parseSource>, signal: AbortSignal) {
+  const hit = metadataCache.get(source.url);
+  if (hit && hit.expires > Date.now()) return hit.data;
+  if (lookupCount >= 6) throw new MediaError(503, "VidSnap is busy. Try again shortly.");
+  lookupCount++;
   try {
-    const info = await ytDlp(url, {
-      dumpSingleJson: true,
-      noCheckCertificate: true,
-      noWarnings: true,
-      preferFreeFormats: true,
-      addHeader: "user-agent:googlebot",
-    }) as unknown as Record<string, unknown>;
+    const data = await getMetadata(source, signal);
+    metadataCache.delete(source.url);
+    if (metadataCache.size >= 128) metadataCache.delete(metadataCache.keys().next().value!);
+    metadataCache.set(source.url, { data, expires: Date.now() + 5 * 60_000 });
+    return data;
+  } finally {
+    lookupCount--;
+  }
+}
 
-    const title = (info.title as string) ?? "Unknown title";
-    const thumbnail = (info.thumbnail as string) ?? "";
-    const durationRaw = info.duration as number | undefined;
-    const duration = durationRaw ? formatDuration(durationRaw) : "Unknown";
-    const platform = detectPlatform(url);
-
-    // Build format list: 360p, 720p, 1080p, mp3
-    const formats = [
-      { quality: "360p", format: "mp4", label: "360p MP4" },
-      { quality: "720p", format: "mp4", label: "720p MP4" },
-      { quality: "1080p", format: "mp4", label: "1080p MP4" },
-      { quality: "mp3", format: "mp3", label: "MP3 Audio" },
-    ];
-
-    const response = GetVideoInfoResponse.parse({
-      title,
-      thumbnail,
-      duration,
-      platform,
-      formats,
-    });
-
-    res.json(response);
-  } catch (err) {
-    req.log.error({ err }, "Failed to fetch video info");
-    res.status(500).json({ error: "Failed to fetch video info. Make sure the URL is valid and the platform is supported." });
+router.post("/info", async (req, res) => {
+  try {
+    const input = GetVideoInfoBody.safeParse(req.body);
+    if (!input.success) throw new MediaError(400, "Paste a public video link to continue.");
+    const { options, ...video } = await lookup(parseSource(input.data.url), requestSignal(res));
+    res.json({ ...video, formats: options.map(({ quality, format, label }) => ({ quality, format, label })) });
+  } catch (error) {
+    sendError(req, res, error);
   }
 });
 
-/** POST /api/download — get direct download URL */
-router.post("/download", async (req, res): Promise<void> => {
-  const parsed = GetDownloadLinkBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-
-  const { url, format } = parsed.data;
-
-  // Map quality key to yt-dlp format selector
-  const formatMap: Record<string, string> = {
-    "360p": "bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]",
-    "720p": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]",
-    "1080p": "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]",
-    "mp3": "bestaudio[ext=m4a]/bestaudio",
-  };
-
-  const ytdlpFormat = formatMap[format] ?? "best";
-
+router.post("/download", async (req, res) => {
+  const key = req.ip ?? "unknown";
+  let directory: string | undefined;
+  let reserved = false;
   try {
-    // Get the direct URL without downloading
-    const result = await ytDlp(url, {
-      getUrl: true,
-      format: ytdlpFormat,
-      noCheckCertificate: true,
-      noWarnings: true,
-    }) as unknown as string;
+    const input = GetDownloadLinkBody.safeParse(req.body);
+    if (!input.success || !/^(?:\d{2,4}p|mp3)$/.test(input.data.format)) {
+      throw new MediaError(400, "Select an available format.");
+    }
+    const source = parseSource(input.data.url);
+    if (activeDownloads.has(key)) throw new MediaError(429, "You already have a file being prepared.");
+    if (activeDownloads.size >= 2) throw new MediaError(503, "VidSnap is busy. Try again shortly.");
+    activeDownloads.add(key);
+    reserved = true;
+    const signal = requestSignal(res);
+    const video = await lookup(source, signal);
+    const option = video.options.find(({ quality }) => quality === input.data.format);
+    if (!option) throw new MediaError(422, "That format is unavailable. Choose another format.");
 
-    // yt-dlp-exec with getUrl returns the URL as a string (possibly multiline for merged streams)
-    const downloadUrl = result.trim().split("\n")[0];
-
-    if (!downloadUrl) {
-      res.status(500).json({ error: "Could not extract download URL" });
-      return;
+    if (downloads.size + activeDownloads.size > 8) {
+      const oldest = [...downloads].find(([, record]) => !record.connections);
+      if (!oldest) throw new MediaError(503, "Download storage is busy. Try again shortly.");
+      await removeDownload(...oldest);
     }
 
-    // Build a filename
-    const ext = format === "mp3" ? "mp3" : "mp4";
-    const filename = `vidsnap-${Date.now()}.${ext}`;
-
-    const response = GetDownloadLinkResponse.parse({ downloadUrl, filename });
-    res.json(response);
-  } catch (err) {
-    req.log.error({ err }, "Failed to get download link");
-    res.status(500).json({ error: "Failed to get download link. The format may not be available for this video." });
+    directory = await mkdtemp(join(await initializeMediaStorage(), "file-"));
+    const path = await prepareMedia(source, option, directory, signal);
+    signal.throwIfAborted();
+    const title = Array.from(video.title.replace(/[^\p{L}\p{N} _-]/gu, " ").trim()).slice(0, 70).join("");
+    const filename = (title || "VidSnap") + "." + option.format;
+    const token = randomUUID();
+    downloads.set(token, { path, filename, expires: Date.now() + lifetime, connections: 0 });
+    directory = undefined;
+    res.json({ downloadUrl: "/api/file?token=" + token, filename });
+  } catch (error) {
+    sendError(req, res, error);
+  } finally {
+    if (reserved) activeDownloads.delete(key);
+    if (directory) {
+      await rm(directory, { recursive: true, force: true }).catch(() =>
+        req.log.error("Failed to remove an incomplete download"));
+    }
   }
+});
+
+router.get("/file", (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  const file = downloads.get(token);
+  if (!file || file.expires <= Date.now()) {
+    res.status(404).json({ error: "This download has expired. Prepare the file again." });
+    return;
+  }
+  if (file.connections >= 2) {
+    res.set("Retry-After", "10").status(429).json({ error: "This file is already downloading." });
+    return;
+  }
+  file.connections++;
+  res.once("close", () => file.connections--);
+  res.download(file.path, file.filename, { cacheControl: false }, (error) => {
+    if (error && !res.destroyed) {
+      if (res.headersSent) res.destroy();
+      else sendError(req, res, error);
+    }
+  });
 });
 
 export default router;
