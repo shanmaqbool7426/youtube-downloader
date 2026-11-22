@@ -33,7 +33,7 @@ export function Footer() {
           <div className="footer-brand">
             <Logo />
             <p>
-              HD Grab is a free, browser-based YouTube video downloader. Paste a link to save videos
+              ClipZap is a free, browser-based YouTube video downloader. Paste a link to save videos
               in 1080p Full HD, 720p, 4K or as MP3 audio, with real file sizes shown up front.
             </p>
           </div>
@@ -51,9 +51,9 @@ export function Footer() {
           ))}
         </div>
         <div className="footer-bottom">
-          <span>© {new Date().getFullYear()} HD Grab. All rights reserved.</span>
+          <span>© {new Date().getFullYear()} ClipZap. All rights reserved.</span>
           <span>
-            HD Grab is not affiliated with YouTube or Google LLC. Download only content you have the
+            ClipZap is not affiliated with YouTube or Google LLC. Download only content you have the
             right to save.
           </span>
         </div>

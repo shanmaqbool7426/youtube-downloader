@@ -18,7 +18,7 @@ export const PAGES: PageMeta[] = [
   {
     path: '/',
     file: 'index.html',
-    title: 'YouTube Video Downloader 1080p – Free HD, 4K & MP3 | HD Grab',
+    title: 'YouTube Video Downloader 1080p – Free HD, 4K & MP3 | ClipZap',
     description:
       'Download YouTube videos in 1080p Full HD, 720p, 4K or MP3 for free. Paste a link, see real file sizes for every format and save with audio. No app, no sign-up.',
     homeSchema: true,
@@ -26,21 +26,21 @@ export const PAGES: PageMeta[] = [
   {
     path: '/privacy',
     file: 'privacy.html',
-    title: 'Privacy Policy | HD Grab',
+    title: 'Privacy Policy | ClipZap',
     description:
-      'How HD Grab handles your data: no accounts, no tracking cookies, and video files that are streamed to you and never stored on our servers.',
+      'How ClipZap handles your data: no accounts, no tracking cookies, and video files that are streamed to you and never stored on our servers.',
   },
   {
     path: '/terms',
     file: 'terms.html',
-    title: 'Terms of Use | HD Grab',
+    title: 'Terms of Use | ClipZap',
     description:
-      'The terms for using HD Grab, the free online YouTube video downloader, including acceptable use and respecting creator copyright.',
+      'The terms for using ClipZap, the free online YouTube video downloader, including acceptable use and respecting creator copyright.',
   },
   {
     path: '/404',
     file: '404.html',
-    title: 'Page Not Found | HD Grab',
+    title: 'Page Not Found | ClipZap',
     description: 'The page you were looking for does not exist.',
     noindex: true,
   },

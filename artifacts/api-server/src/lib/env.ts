@@ -61,6 +61,13 @@ export const env = {
   heavyRateLimitMax: num("HEAVY_RATE_LIMIT_MAX", 30),
   heavyRateLimitWindowMs: num("HEAVY_RATE_LIMIT_WINDOW_MS", 60_000),
 
+  /**
+   * Public hostname (e.g. "clipzap.net"). When set, page requests arriving on
+   * any other host (www., the *.onrender.com URL) get a 301 to it, so search
+   * engines only index one domain. Leave unset until DNS points at this server.
+   */
+  canonicalHost: str("CANONICAL_HOST", "").toLowerCase(),
+
   /** Optional override for the built SPA directory served by this server. */
   staticRoot: process.env.STATIC_ROOT,
 } as const;

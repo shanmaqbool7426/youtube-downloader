@@ -68,7 +68,8 @@ a {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
 }
 
 /* ───────────────────────── Header ───────────────────────── */
@@ -1058,7 +1059,8 @@ a {
 
 @media (max-width: 600px) {
   .container {
-    padding: 0 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
   .hero {
     padding-top: 2.5rem;

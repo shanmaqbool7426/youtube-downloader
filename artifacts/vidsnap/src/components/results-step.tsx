@@ -185,7 +185,7 @@ export function ResultsStep({
           </div>
 
           <p className="results-copy">
-            Tip: <strong>Video + Audio</strong> rows save a single file with sound — HD Grab fetches
+            Tip: <strong>Video + Audio</strong> rows save a single file with sound — ClipZap fetches
             the video and audio streams in parallel and merges them, which is the fastest way to get
             1080p. <strong>Audio</strong> rows include MP3 at 320/128 kbps. If a download fails,
             click generate again to get a fresh link.

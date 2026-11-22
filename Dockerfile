@@ -1,4 +1,4 @@
-# HD Grab — single container serving the API and the built SPA.
+# ClipZap — single container serving the API and the built SPA.
 # yt-dlp and ffmpeg come from Linux packages here; the Windows binaries in
 # artifacts/api-server/bin are local-only (gitignored).
 

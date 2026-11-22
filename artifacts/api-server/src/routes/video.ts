@@ -529,7 +529,7 @@ async function runStreamingDownload(
   },
 ): Promise<void> {
   const releases: (() => void)[] = [];
-  const dir = await mkdtemp(path.join(os.tmpdir(), "hdgrab-"));
+  const dir = await mkdtemp(path.join(os.tmpdir(), "clipzap-"));
   let finished = false;
 
   const finish = () => {
@@ -711,7 +711,7 @@ function sendDownloadError(req: Request, res: Response, status: number, message:
   res.status(status);
   if (req.accepts(["json", "html"]) === "html") {
     res.type("html").send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Download failed · HD Grab</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Download failed · ClipZap</title>
 <style>body{font-family:Inter,system-ui,sans-serif;background:#f7f7f5;color:#18181b;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
 main{background:#fff;border:1px solid #e5e5e8;border-radius:16px;padding:28px;max-width:440px;text-align:center}
 h1{font-size:1.25rem;margin:0 0 8px}p{color:#63636b;margin:0 0 20px}

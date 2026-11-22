@@ -95,7 +95,7 @@ export default function App() {
           )}
         </div>
 
-        <ul className="trust-row" aria-label="Why HD Grab">
+        <ul className="trust-row" aria-label="Why ClipZap">
           {TRUST_POINTS.map((point) => (
             <li key={point}>
               <Check size={16} aria-hidden="true" />

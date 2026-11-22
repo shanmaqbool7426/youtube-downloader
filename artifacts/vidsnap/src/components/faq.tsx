@@ -8,7 +8,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Can I download just the audio as MP3?',
-    a: 'Yes. After you paste a link, choose one of the MP3 options. HD Grab extracts the audio track at 320 kbps or 128 kbps, so you can save music, podcasts and lectures as audio only.',
+    a: 'Yes. After you paste a link, choose one of the MP3 options. ClipZap extracts the audio track at 320 kbps or 128 kbps, so you can save music, podcasts and lectures as audio only.',
   },
   {
     q: 'Why does the 1080p option sometimes not appear?',
@@ -16,7 +16,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: 'Why is the 1080p file missing audio?',
-    a: 'YouTube uses a technique called DASH, where it stores high-resolution video streams and the audio track as two separate files. Formats marked "Video Only" do not contain audio. Use the "Video + Audio" option from the list — HD Grab automatically combines the best video stream with the audio track into a single MP4 with sound.',
+    a: 'YouTube uses a technique called DASH, where it stores high-resolution video streams and the audio track as two separate files. Formats marked "Video Only" do not contain audio. Use the "Video + Audio" option from the list — ClipZap automatically combines the best video stream with the audio track into a single MP4 with sound.',
   },
   {
     q: 'Is 1080p 60fps supported?',

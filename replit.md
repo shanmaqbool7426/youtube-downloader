@@ -1,4 +1,4 @@
-# HD Grab — YouTube Video Downloader
+# ClipZap — YouTube Video Downloader
 
 Browser-based YouTube downloader: paste a video URL, preview every available
 format with real file sizes, and download 1080p Full HD (video+audio merged),
@@ -45,12 +45,15 @@ deployed separately.
 | `STATIC_ROOT` | bundled SPA path | Directory of the built SPA |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `DATABASE_URL` | — (unused by server) | Kept for future persistence; not required at boot |
+| `CANONICAL_HOST` | — (off) | e.g. `clipzap.net`: 301 page requests on other hosts (www, onrender.com) to it |
 
-### SEO checklist (do these when the real domain exists)
+### SEO / domain
 
-All crawler artifacts live in `artifacts/vidsnap/public/` and `index.html`.
-Search for `hdgrab.example.com` and replace with the production domain in:
-`index.html` (canonical, og:url, JSON-LD), `sitemap.xml`, `robots.txt`.
+The production domain is **https://clipzap.net** (`DEFAULT_SITE_URL` in
+`artifacts/vidsnap/scripts/seo-head.mjs`; override with `SITE_URL` at build
+time). The build prerenders every page in `src/site.ts` and generates
+canonical/OG tags, JSON-LD, `robots.txt` and `sitemap.xml` from that URL; there
+are no hand-maintained copies to keep in sync.
 
 ## Stack
 

@@ -1,8 +1,8 @@
 // Shared by vite.config.ts (dev server) and prerender.mjs (production build).
 
-export const DEFAULT_SITE_URL = 'https://youtube-downloader-ilsc.onrender.com';
+export const DEFAULT_SITE_URL = 'https://clipzap.net';
 
-/** Public origin of the site, without a trailing slash. Set SITE_URL at build time for a custom domain. */
+/** Public origin of the site, without a trailing slash. Override with SITE_URL at build time (e.g. for staging). */
 export function siteUrl() {
   return (process.env.SITE_URL || DEFAULT_SITE_URL).replace(/\/+$/, '');
 }
@@ -40,20 +40,21 @@ export function homeJsonLd(origin, faqItems) {
     {
       '@type': 'Organization',
       '@id': `${origin}/#organization`,
-      name: 'HD Grab',
+      name: 'ClipZap',
       url: `${origin}/`,
       logo: {
         '@type': 'ImageObject',
-        url: `${origin}/apple-touch-icon.png`,
-        width: 576,
-        height: 576,
+        url: `${origin}/icon-512.png`,
+        width: 512,
+        height: 512,
       },
     },
     {
       '@type': 'WebSite',
       '@id': `${origin}/#website`,
       url: `${origin}/`,
-      name: 'HD Grab',
+      name: 'ClipZap',
+      alternateName: ['clipzap.net', 'Clip Zap'],
       description:
         'Free online YouTube video downloader for 1080p Full HD, 720p, 4K and MP3 with real file sizes.',
       publisher: { '@id': `${origin}/#organization` },
@@ -62,7 +63,7 @@ export function homeJsonLd(origin, faqItems) {
     {
       '@type': 'WebApplication',
       '@id': `${origin}/#webapp`,
-      name: 'HD Grab YouTube Video Downloader',
+      name: 'ClipZap YouTube Video Downloader',
       url: `${origin}/`,
       applicationCategory: 'MultimediaApplication',
       operatingSystem: 'Windows, macOS, Linux, Android, iOS',

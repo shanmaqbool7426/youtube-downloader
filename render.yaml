@@ -12,3 +12,8 @@ services:
       # processes plus ffmpeg, so keep parallel work low.
       - key: YTDLP_MAX_CONCURRENT
         value: "2"
+      # Redirects www.clipzap.net and the onrender.com URL to clipzap.net.
+      # Uncomment ONLY after clipzap.net is added as a custom domain in Render
+      # and its DNS is live, otherwise visitors get redirected to a dead domain.
+      # - key: CANONICAL_HOST
+      #   value: clipzap.net

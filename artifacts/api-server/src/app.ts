@@ -36,6 +36,18 @@ app.use(
   }),
 );
 app.use(securityHeaders);
+
+// Single public domain: www.clipzap.net and the *.onrender.com URL -> clipzap.net.
+// /api stays reachable on every host so health checks and in-flight calls keep working.
+if (env.canonicalHost) {
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.hostname === env.canonicalHost || req.path.startsWith("/api")) {
+      next();
+      return;
+    }
+    res.redirect(301, `https://${env.canonicalHost}${req.originalUrl}`);
+  });
+}
 // Same-origin in production (SPA served below); open in dev for local tooling.
 if (!env.isProduction) {
   app.use(cors());

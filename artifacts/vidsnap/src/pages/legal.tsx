@@ -22,7 +22,7 @@ export function PrivacyPage() {
   return (
     <LegalLayout
       title="Privacy Policy"
-      intro="HD Grab is built to collect as little as possible. There are no accounts, no advertising trackers and no analytics cookies. This page explains exactly what happens to the data involved when you use the downloader."
+      intro="ClipZap is built to collect as little as possible. There are no accounts, no advertising trackers and no analytics cookies. This page explains exactly what happens to the data involved when you use the downloader."
     >
       <h2>What we process</h2>
       <ul>
@@ -53,7 +53,7 @@ export function PrivacyPage() {
 
       <h2>Cookies and tracking</h2>
       <p>
-        HD Grab does not set advertising or analytics cookies and does not use cross-site
+        ClipZap does not set advertising or analytics cookies and does not use cross-site
         tracking. Fonts are loaded from Google Fonts, which means your browser connects to Google
         to fetch them; Google's own privacy policy applies to that request.
       </p>
@@ -66,7 +66,7 @@ export function PrivacyPage() {
 
       <h2>Children</h2>
       <p>
-        HD Grab is a general-audience tool and does not knowingly collect personal information
+        ClipZap is a general-audience tool and does not knowingly collect personal information
         from children.
       </p>
 
@@ -82,11 +82,11 @@ export function TermsPage() {
   return (
     <LegalLayout
       title="Terms of Use"
-      intro="By using HD Grab you agree to these terms. They are short because the service is simple: a free tool for saving videos you are allowed to save, for personal use."
+      intro="By using ClipZap you agree to these terms. They are short because the service is simple: a free tool for saving videos you are allowed to save, for personal use."
     >
       <h2>Using the service</h2>
       <p>
-        HD Grab lets you save publicly available videos for personal, offline viewing. You are
+        ClipZap lets you save publicly available videos for personal, offline viewing. You are
         responsible for how you use the tool and for the files you download with it.
       </p>
 
@@ -107,7 +107,7 @@ export function TermsPage() {
 
       <h2>No affiliation</h2>
       <p>
-        HD Grab is an independent tool and is not affiliated with, endorsed by or sponsored by
+        ClipZap is an independent tool and is not affiliated with, endorsed by or sponsored by
         YouTube or Google LLC. YouTube is a trademark of Google LLC.
       </p>
 
@@ -120,13 +120,13 @@ export function TermsPage() {
 
       <h2>Limitation of liability</h2>
       <p>
-        To the fullest extent permitted by law, HD Grab is not liable for any damages arising
+        To the fullest extent permitted by law, ClipZap is not liable for any damages arising
         from your use of the service or of content you download.
       </p>
 
       <h2>Changes</h2>
       <p>
-        We may update these terms from time to time. Continuing to use HD Grab after a change
+        We may update these terms from time to time. Continuing to use ClipZap after a change
         means you accept the updated terms.
       </p>
     </LegalLayout>
