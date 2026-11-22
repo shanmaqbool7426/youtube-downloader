@@ -13,6 +13,8 @@ export interface VideoInfo {
   thumbnail: string;
   /** Duration in HH:MM:SS or MM:SS format */
   duration: string;
+  /** Exact duration in seconds when the provider reports it, else null */
+  durationSeconds?: number | null;
   /** Platform name (YouTube, Instagram, etc.) */
   platform: string;
   formats: VideoFormat[];

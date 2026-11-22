@@ -12,8 +12,9 @@ services:
       # processes plus ffmpeg, so keep parallel work low.
       - key: YTDLP_MAX_CONCURRENT
         value: "2"
-      # Redirects www.clipzap.net and the onrender.com URL to clipzap.net.
-      # Uncomment ONLY after clipzap.net is added as a custom domain in Render
-      # and its DNS is live, otherwise visitors get redirected to a dead domain.
-      # - key: CANONICAL_HOST
-      #   value: clipzap.net
+      # One public host. The edge already redirects the apex to www, but keeping
+      # the application redirect too means canonicals, sitemap URLs and redirects
+      # stay aligned even if the edge rule is changed or bypassed. The value MUST
+      # match DEFAULT_SITE_URL in artifacts/vidsnap/scripts/seo-head.mjs.
+      - key: CANONICAL_HOST
+        value: www.clipzap.net

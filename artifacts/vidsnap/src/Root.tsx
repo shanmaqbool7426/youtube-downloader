@@ -2,6 +2,7 @@ import App from './App';
 import { Header } from './components/header';
 import { Footer } from './components/footer';
 import { PrivacyPage, TermsPage } from './pages/legal';
+import { FindDownloadsPage, Missing1080pPage, MissingAudioPage } from './pages/help';
 import NotFound from './pages/not-found';
 
 function Page({ path }: { path: string }) {
@@ -13,6 +14,12 @@ function Page({ path }: { path: string }) {
       return <PrivacyPage />;
     case '/terms':
       return <TermsPage />;
+    case '/help/missing-audio':
+      return <MissingAudioPage />;
+    case '/help/missing-1080p':
+      return <Missing1080pPage />;
+    case '/help/find-downloads':
+      return <FindDownloadsPage />;
     default:
       return <NotFound />;
   }

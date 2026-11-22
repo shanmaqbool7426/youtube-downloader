@@ -62,9 +62,11 @@ export const env = {
   heavyRateLimitWindowMs: num("HEAVY_RATE_LIMIT_WINDOW_MS", 60_000),
 
   /**
-   * Public hostname (e.g. "clipzap.net"). When set, page requests arriving on
-   * any other host (www., the *.onrender.com URL) get a 301 to it, so search
-   * engines only index one domain. Leave unset until DNS points at this server.
+   * Public hostname (e.g. "www.clipzap.net"). When set, page requests arriving
+   * on any other host (the apex, the *.onrender.com URL) get a 301 to it, so
+   * search engines only index one domain. Must match DEFAULT_SITE_URL in
+   * artifacts/vidsnap/scripts/seo-head.mjs, or canonical tags point elsewhere.
+   * Leave unset until DNS points at this server.
    */
   canonicalHost: str("CANONICAL_HOST", "").toLowerCase(),
 

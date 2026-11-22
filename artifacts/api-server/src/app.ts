@@ -37,7 +37,7 @@ app.use(
 );
 app.use(securityHeaders);
 
-// Single public domain: www.clipzap.net and the *.onrender.com URL -> clipzap.net.
+// Single public domain: the apex and the *.onrender.com URL -> www.clipzap.net.
 // /api stays reachable on every host so health checks and in-flight calls keep working.
 if (env.canonicalHost) {
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -105,6 +105,22 @@ if (existsSync(staticRoot)) {
     res.redirect(301, (clean || "/") + query);
   });
 
+  const notFoundPage = path.join(staticRoot, "404.html");
+  const fallbackPage = existsSync(notFoundPage) ? notFoundPage : path.join(staticRoot, "index.html");
+
+  // /404 is the prerendered error page, not a destination. It still has to be
+  // reachable for the SPA, but serving it as 200 would put a second, indexable
+  // copy of the error page in the crawl queue.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if ((req.method !== "GET" && req.method !== "HEAD") || req.path !== "/404") {
+      next();
+      return;
+    }
+    res.status(404);
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(fallbackPage);
+  });
+
   app.use(
     express.static(staticRoot, {
       index: "index.html",
@@ -126,8 +142,6 @@ if (existsSync(staticRoot)) {
   // Every real page is a prerendered file matched above, so anything left is a
   // genuine 404. Returning 200 here would create "soft 404s" that search engines
   // index as duplicate copies of the homepage.
-  const notFoundPage = path.join(staticRoot, "404.html");
-  const fallbackPage = existsSync(notFoundPage) ? notFoundPage : path.join(staticRoot, "index.html");
   app.use((req: Request, res: Response, next: NextFunction) => {
     if ((req.method !== "GET" && req.method !== "HEAD") || req.path.startsWith("/api")) {
       next();

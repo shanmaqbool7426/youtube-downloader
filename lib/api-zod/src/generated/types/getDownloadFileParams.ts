@@ -12,7 +12,7 @@ export type GetDownloadFileParams = {
  */
 url: string;
 /**
- * yt-dlp format id (from VideoInfo.formats[].formatId)
+ * yt-dlp format id from VideoInfo.formats[].formatId; synthetic ids video+audio:<height> and mp3:<bitrate> trigger server-side merge/transcode
  */
 formatId: string;
 };

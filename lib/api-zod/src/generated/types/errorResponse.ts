@@ -5,7 +5,13 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { ErrorResponseCode } from './errorResponseCode';
 
 export interface ErrorResponse {
+  /** Human-readable message that says what happened and what to do next */
   error: string;
+  /** Stable machine-readable reason the UI switches on */
+  code?: ErrorResponseCode;
+  /** Whether offering the same link again could plausibly succeed */
+  retryable?: boolean;
 }

@@ -45,15 +45,19 @@ deployed separately.
 | `STATIC_ROOT` | bundled SPA path | Directory of the built SPA |
 | `LOG_LEVEL` | `info` | Pino log level |
 | `DATABASE_URL` | — (unused by server) | Kept for future persistence; not required at boot |
-| `CANONICAL_HOST` | — (off) | e.g. `clipzap.net`: 301 page requests on other hosts (www, onrender.com) to it |
+| `CANONICAL_HOST` | — (off) | e.g. `www.clipzap.net`: 301 page requests on other hosts (apex, onrender.com) to it |
 
 ### SEO / domain
 
-The production domain is **https://clipzap.net** (`DEFAULT_SITE_URL` in
+The production domain is **https://www.clipzap.net** (`DEFAULT_SITE_URL` in
 `artifacts/vidsnap/scripts/seo-head.mjs`; override with `SITE_URL` at build
-time). The build prerenders every page in `src/site.ts` and generates
+time). www is canonical because the edge 301s the apex to it — pointing
+`DEFAULT_SITE_URL` at the apex would make every canonical/OG/sitemap URL point
+at a redirect. The build prerenders every page in `src/site.ts` and generates
 canonical/OG tags, JSON-LD, `robots.txt` and `sitemap.xml` from that URL; there
-are no hand-maintained copies to keep in sync.
+are no hand-maintained copies to keep in sync. Sitemap `<lastmod>` comes from
+the per-page `lastmod` field in `src/site.ts` — bump it when you edit a page,
+never derive it from the build time.
 
 ## Stack
 

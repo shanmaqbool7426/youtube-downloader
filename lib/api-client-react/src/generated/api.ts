@@ -222,7 +222,7 @@ export const getGetDownloadFileUrl = (params: GetDownloadFileParams,) => {
 }
 
 /**
- * Streams the selected format as a real media file (Content-Disposition attachment). Works for DASH/HLS formats too.
+ * Streams the selected format as a real media file (Content-Disposition attachment). Plain yt-dlp format ids pipe directly from the source; synthetic ids `video+audio:<height>` download the video and audio streams in parallel and mux them server-side into one file, and `mp3:<bitrate>` extracts MP3 audio (320/128).
  * @summary Download video file
  */
 export const getDownloadFile = async (params: GetDownloadFileParams, options?: RequestInit): Promise<Blob> => {

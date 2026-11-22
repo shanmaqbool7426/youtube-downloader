@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGetVideoInfo } from '@workspace/api-client-react';
-import type { VideoInfo, VideoFormat } from '@workspace/api-client-react';
+import type { VideoInfo } from '@workspace/api-client-react';
 import { Check } from 'lucide-react';
 
 import { UrlStep } from './components/url-step';
@@ -10,55 +10,44 @@ import { Faq } from './components/faq';
 
 const TRUST_POINTS = ['No sign-up', 'No app to install', 'MP4 & MP3', 'Up to 4K', 'Any device'];
 
-function pickDefaultFormat(formats: VideoFormat[]): string {
-  if (formats.length === 0) return '';
-  const merged = formats.find((fmt) => fmt.formatId.startsWith('video+audio:'));
-  if (merged) return merged.formatId;
-  const progressive = formats.find((fmt) => fmt.type === 'progressive');
-  if (progressive) return progressive.formatId;
-  const hd = formats.find((fmt) => fmt.type === 'video' && /^1080p/.test(fmt.quality));
-  if (hd) return hd.formatId;
-  return formats[0].formatId;
-}
+const FALLBACK_ERROR =
+  'We could not read that video. Check the link and try again in a moment.';
 
-function errorMessage(
-  err: { data?: { error?: string } | null; message?: string },
-  fallback: string,
-): string {
-  return err?.data?.error ?? err?.message ?? fallback;
+interface LookupErrorBody {
+  error?: string;
+  code?: string;
+  retryable?: boolean;
 }
 
 /** Homepage: the downloader plus the long-form guide content. */
 export default function App() {
   const [url, setUrl] = useState('');
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
-  const [selectedFormatId, setSelectedFormatId] = useState('');
   const [infoError, setInfoError] = useState<string | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
 
   const infoMutation = useGetVideoInfo();
 
   const handleProcess = () => {
     const target = url.trim();
-    if (!target) return;
+    // The button is disabled while pending, but Enter in the field and a
+    // double tap can both land here inside the same tick.
+    if (!target || infoMutation.isPending) return;
 
     setInfoError(null);
+    setCanRetry(false);
     setVideoInfo(null);
-    setSelectedFormatId('');
 
     infoMutation.mutate(
       { data: { url: target } },
       {
-        onSuccess: (data) => {
-          setVideoInfo(data);
-          setSelectedFormatId(pickDefaultFormat(data.formats ?? []));
-        },
+        onSuccess: (data) => setVideoInfo(data),
         onError: (err) => {
-          setInfoError(
-            errorMessage(
-              err,
-              'Failed to fetch video information. Make sure the URL is valid and the platform is supported.',
-            ),
-          );
+          const body = (err as { data?: LookupErrorBody | null } | null)?.data ?? null;
+          // The URL stays in the field, so a typo is a one-character fix
+          // instead of a fresh paste.
+          setInfoError(body?.error ?? FALLBACK_ERROR);
+          setCanRetry(body?.retryable ?? true);
         },
       },
     );
@@ -69,12 +58,12 @@ export default function App() {
       <section className="hero container" id="downloader">
         <span className="eyebrow">Free online YouTube downloader</span>
         <h1 className="hero-title">
-          YouTube Video Downloader 1080p{' '}
-          <span className="hero-title-accent">Full HD video with audio, free</span>
+          YouTube video downloader
+          <span className="hero-title-accent">1080p Full HD with sound</span>
         </h1>
         <p className="hero-subtitle">
-          Paste a YouTube link to see every available quality, from 1080p Full HD and 4K to MP3
-          audio, with real file sizes. Then save it straight to your device.
+          Paste a link to see every format YouTube actually returns for it — 1080p, 720p, 4K or MP3 —
+          with a real file size beside each one. Then save it to your device.
         </p>
 
         <div className="steps-panel">
@@ -84,15 +73,9 @@ export default function App() {
             onProcess={handleProcess}
             isProcessing={infoMutation.isPending}
             errorMsg={infoError}
+            canRetry={canRetry}
           />
-          {videoInfo && (
-            <ResultsStep
-              videoInfo={videoInfo}
-              selectedFormatId={selectedFormatId}
-              onSelect={setSelectedFormatId}
-              videoUrl={url.trim()}
-            />
-          )}
+          {videoInfo && <ResultsStep videoInfo={videoInfo} videoUrl={url.trim()} />}
         </div>
 
         <ul className="trust-row" aria-label="Why ClipZap">

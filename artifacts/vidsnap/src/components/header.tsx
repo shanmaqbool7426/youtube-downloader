@@ -4,7 +4,7 @@ import { Logo } from './logo';
 const NAV = [
   { label: 'How it works', href: '/#how-to-use' },
   { label: 'Quality guide', href: '/#resolution' },
-  { label: 'Features', href: '/#features' },
+  { label: 'Help', href: '/#troubleshooting' },
   { label: 'FAQ', href: '/#faq' },
 ];
 
@@ -22,9 +22,9 @@ export function Header() {
             ))}
           </ul>
         </nav>
-        <a className="nav-cta" href="/#downloader">
+        <a className="nav-cta" href="/#downloader" aria-label="Download a video">
           <Download size={16} aria-hidden="true" />
-          Download a video
+          <span className="nav-cta-label">Download a video</span>
         </a>
       </div>
     </header>
