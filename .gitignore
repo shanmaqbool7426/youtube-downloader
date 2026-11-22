@@ -21,7 +21,6 @@ node_modules
 *.sublime-workspace
 
 # IDE - VSCode
-.vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
@@ -49,6 +48,5 @@ Thumbs.db
 .local/
 
 # local env + runtime binaries
-.env
-.env.*
 artifacts/api-server/bin/
+config.bat

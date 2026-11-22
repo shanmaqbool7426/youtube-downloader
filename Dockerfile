@@ -29,8 +29,16 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 # curl_cffi backs YTDLP_IMPERSONATE=chrome; yt-dlp-ejs lets yt-dlp solve
 # YouTube's JS challenges with the Node runtime already in this image.
+#
+# yt-dlp is deliberately NOT pinned. YouTube changes its player responses every
+# few weeks, and a build pinned to an older release starts answering "Failed to
+# extract any player response" (HTTP 403) for every video while the identical
+# code still works on a developer machine. Installing the latest release at
+# build time avoids that; the resolved version is printed so the deploy log
+# shows which build is actually running.
 RUN python3 -m venv /opt/media \
- && /opt/media/bin/pip install --no-cache-dir yt-dlp==2026.10.26 yt-dlp-ejs curl_cffi
+ && /opt/media/bin/pip install --no-cache-dir --upgrade yt-dlp yt-dlp-ejs curl_cffi \
+ && /opt/media/bin/yt-dlp --version
 COPY --from=build /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=build /app/artifacts/vidsnap/dist/public ./artifacts/vidsnap/dist/public
 USER node
