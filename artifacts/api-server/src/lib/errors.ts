@@ -105,6 +105,8 @@ const RULES: Array<{ code: ApiErrorCode; test: RegExp }> = [
     code: "SIGN_IN_REQUIRED",
     test: /Private video|This video is private|members-only|Join this channel|Sign in to confirm your age|age-restricted|Inappropriate for some users|requires payment|is only available to/i,
   },
+  // A cookie jar yt-dlp cannot read: the operator needs to re-export it.
+  { code: "PROVIDER_BLOCKED", test: /does not look like a Netscape format|skipping cookie file entry/i },
   // YouTube refusing our server's IP / TLS fingerprint.
   {
     code: "PROVIDER_BLOCKED",
@@ -145,9 +147,14 @@ export function classifyLookupError(err: unknown): LookupFailure {
 
   if (e?.timedOut) return failure("TIMEOUT");
 
-  // stderr first: `message` embeds the whole command with every flag, which
-  // makes the keyword rules below match on flags rather than on the real cause.
-  const text = [e?.stderr, e?.stdout, e?.message].filter(Boolean).join("\n");
+  // yt-dlp-exec (execa) puts the tool's own message in `stderr` and leaves
+  // `message` as the command line. Only fall back to `message` when stderr is
+  // empty: it embeds every flag, so `--socket-timeout 30` alone would classify
+  // an unrelated failure as a timeout.
+  const stderr = e?.stderr?.trim() ?? "";
+  const text = stderr
+    ? [stderr, e?.stdout].filter(Boolean).join("\n")
+    : [e?.stdout, e?.message].filter(Boolean).join("\n");
   if (!text) return failure("PROVIDER_ERROR");
 
   for (const rule of RULES) {

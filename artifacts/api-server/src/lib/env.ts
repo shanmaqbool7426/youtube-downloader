@@ -49,9 +49,19 @@ export const env = {
    * IPs (Render, Railway, …) get "Failed to extract any player response" /
    * "confirm you're not a bot" without them. On Render, add a Secret File
    * named cookies.txt and set this to /etc/secrets/cookies.txt.
+   *
+   * An expired jar is worse than none: YouTube answers 403 to every client that
+   * receives it, and yt-dlp then skips the cookie-free clients. Lookups
+   * therefore retry without cookies as a last resort — but re-exporting the jar
+   * is what makes them fast again.
    */
   ytdlpCookiesFile: str("YTDLP_COOKIES_FILE", ""),
-  /** Raw --extractor-args value, e.g. "youtube:player_client=tv,web_safari". */
+  /**
+   * Raw --extractor-args value, e.g. "youtube:player_client=tv,web_safari".
+   * Used for the first extraction attempt only: if YouTube answers 403 the
+   * request is retried with yt-dlp's own client list (and then without these
+   * cookies), so a stale value here degrades instead of breaking lookups.
+   */
   ytdlpExtractorArgs: str("YTDLP_EXTRACTOR_ARGS", ""),
 
   /** General API rate limit (per IP). */
