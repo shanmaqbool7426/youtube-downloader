@@ -36,7 +36,9 @@ export function UrlStep({
           <input
             type="url"
             className="url-input"
-            placeholder="YouTube video URL"
+            placeholder="Paste YouTube link, e.g. https://youtu.be/…"
+            aria-label="YouTube video URL"
+            inputMode="url"
             value={url}
             onChange={(e) => onUrlChange(e.target.value)}
             required
@@ -61,8 +63,8 @@ export function UrlStep({
         </button>
       </form>
       <p className="form-note">
-        Lower quality is selected by default. Choose 720p or 1080p when available if
-        you want higher quality.
+        Works with youtube.com, youtu.be and Shorts links. You'll pick the exact quality on the
+        next step.
       </p>
       {errorMsg && (
         <div className="error-message" role="alert">

@@ -1,7 +1,8 @@
-import { createRoot } from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import App from './App';
+import { Root } from './Root';
 import { ErrorBoundary } from './components/error-boundary';
 import './index.css';
 
@@ -21,10 +22,20 @@ const queryClient = new QueryClient({
   },
 });
 
-createRoot(document.getElementById('root')!).render(
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  </ErrorBoundary>,
+const tree = (
+  <StrictMode>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Root path={window.location.pathname} />
+      </QueryClientProvider>
+    </ErrorBoundary>
+  </StrictMode>
 );
+
+const container = document.getElementById('root')!;
+// Production pages are prerendered (scripts/prerender.mjs); the dev server serves an empty root.
+if (container.firstElementChild) {
+  hydrateRoot(container, tree);
+} else {
+  createRoot(container).render(tree);
+}

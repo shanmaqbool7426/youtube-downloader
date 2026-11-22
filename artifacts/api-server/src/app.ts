@@ -69,14 +69,34 @@ const staticRoot = env.staticRoot
   : path.resolve(import.meta.dirname, "..", "..", "vidsnap", "dist", "public");
 
 if (existsSync(staticRoot)) {
+  // One URL per page: /index.html -> /, /privacy/ -> /privacy, /privacy.html -> /privacy.
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if ((req.method !== "GET" && req.method !== "HEAD") || req.path.startsWith("/api")) {
+      next();
+      return;
+    }
+    let clean = req.path;
+    if (clean.endsWith("/index.html")) clean = clean.slice(0, -"index.html".length);
+    else if (clean.endsWith(".html")) clean = clean.slice(0, -".html".length);
+    if (clean.length > 1 && clean.endsWith("/")) clean = clean.replace(/\/+$/, "");
+    if (clean === req.path) {
+      next();
+      return;
+    }
+    const query = req.originalUrl.slice(req.path.length);
+    res.redirect(301, (clean || "/") + query);
+  });
+
   app.use(
     express.static(staticRoot, {
       index: "index.html",
+      // Prerendered pages live at /privacy.html etc. and are served as /privacy.
+      extensions: ["html"],
       setHeaders: (res, filePath) => {
         if (filePath.includes(`${path.sep}assets${path.sep}`)) {
           // Hashed filenames → safe to cache "forever".
           res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-        } else if (filePath.endsWith("index.html")) {
+        } else if (filePath.endsWith(".html")) {
           res.setHeader("Cache-Control", "no-cache");
         } else {
           res.setHeader("Cache-Control", "public, max-age=3600");
@@ -85,14 +105,19 @@ if (existsSync(staticRoot)) {
     }),
   );
 
-  // SPA fallback for any other GET (deep links), but never for /api.
+  // Every real page is a prerendered file matched above, so anything left is a
+  // genuine 404. Returning 200 here would create "soft 404s" that search engines
+  // index as duplicate copies of the homepage.
+  const notFoundPage = path.join(staticRoot, "404.html");
+  const fallbackPage = existsSync(notFoundPage) ? notFoundPage : path.join(staticRoot, "index.html");
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.method !== "GET" || req.path.startsWith("/api")) {
+    if ((req.method !== "GET" && req.method !== "HEAD") || req.path.startsWith("/api")) {
       next();
       return;
     }
+    res.status(404);
     res.setHeader("Cache-Control", "no-cache");
-    res.sendFile(path.join(staticRoot, "index.html"));
+    res.sendFile(fallbackPage);
   });
 
   logger.info({ staticRoot }, "Serving built SPA");

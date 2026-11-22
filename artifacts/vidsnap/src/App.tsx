@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useGetVideoInfo } from '@workspace/api-client-react';
 import type { VideoInfo, VideoFormat } from '@workspace/api-client-react';
+import { Check } from 'lucide-react';
 
-import { Header } from './components/header';
 import { UrlStep } from './components/url-step';
 import { ResultsStep } from './components/results-step';
 import { InfoSections } from './components/info-sections';
 import { Faq } from './components/faq';
-import { Footer } from './components/footer';
+
+const TRUST_POINTS = ['No sign-up', 'No app to install', 'MP4 & MP3', 'Up to 4K', 'Any device'];
 
 function pickDefaultFormat(formats: VideoFormat[]): string {
   if (formats.length === 0) return '';
@@ -27,6 +28,7 @@ function errorMessage(
   return err?.data?.error ?? err?.message ?? fallback;
 }
 
+/** Homepage: the downloader plus the long-form guide content. */
 export default function App() {
   const [url, setUrl] = useState('');
   const [videoInfo, setVideoInfo] = useState<VideoInfo | null>(null);
@@ -63,42 +65,48 @@ export default function App() {
   };
 
   return (
-    <>
-      <Header />
-      <main>
-        <section className="hero container" id="downloader">
-          <span className="eyebrow">HD Grab · HD-focused YouTube downloader</span>
-          <h1 className="hero-title">
-            YouTube Video Downloader 1080p <span>| True HD + Audio</span>
-          </h1>
-          <p className="hero-subtitle">
-            A focused Full HD downloader for users who value clarity and sharper playback. Paste
-            your YouTube video URL, process, and access available 1080p quality options instantly.
-          </p>
+    <main id="main">
+      <section className="hero container" id="downloader">
+        <span className="eyebrow">Free online YouTube downloader</span>
+        <h1 className="hero-title">
+          YouTube Video Downloader 1080p{' '}
+          <span className="hero-title-accent">Full HD video with audio, free</span>
+        </h1>
+        <p className="hero-subtitle">
+          Paste a YouTube link to see every available quality, from 1080p Full HD and 4K to MP3
+          audio, with real file sizes. Then save it straight to your device.
+        </p>
 
-          <div className="steps-panel">
-            <UrlStep
-              url={url}
-              onUrlChange={setUrl}
-              onProcess={handleProcess}
-              isProcessing={infoMutation.isPending}
-              errorMsg={infoError}
+        <div className="steps-panel">
+          <UrlStep
+            url={url}
+            onUrlChange={setUrl}
+            onProcess={handleProcess}
+            isProcessing={infoMutation.isPending}
+            errorMsg={infoError}
+          />
+          {videoInfo && (
+            <ResultsStep
+              videoInfo={videoInfo}
+              selectedFormatId={selectedFormatId}
+              onSelect={setSelectedFormatId}
+              videoUrl={url.trim()}
             />
-            {videoInfo && (
-              <ResultsStep
-                videoInfo={videoInfo}
-                selectedFormatId={selectedFormatId}
-                onSelect={setSelectedFormatId}
-                videoUrl={url.trim()}
-              />
-            )}
-          </div>
-        </section>
+          )}
+        </div>
 
-        <InfoSections />
-        <Faq />
-      </main>
-      <Footer />
-    </>
+        <ul className="trust-row" aria-label="Why HD Grab">
+          {TRUST_POINTS.map((point) => (
+            <li key={point}>
+              <Check size={16} aria-hidden="true" />
+              {point}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <InfoSections />
+      <Faq />
+    </main>
   );
 }

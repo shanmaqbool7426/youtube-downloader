@@ -5,6 +5,9 @@ import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
+import { fillHead, siteUrl } from './scripts/seo-head.mjs';
+import { PAGES } from './src/site';
+
 const rawPort = process.env.PORT;
 
 if (!rawPort) {
@@ -34,6 +37,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      // In production scripts/prerender.mjs fills the head per page; the dev
+      // server only needs the homepage values so the tab title isn't raw.
+      name: 'dev-seo-head',
+      apply: 'serve',
+      transformIndexHtml: (html) => fillHead(html, PAGES[0], siteUrl()),
+    },
     runtimeErrorOverlay(),
     ...(process.env.NODE_ENV !== 'production' &&
     process.env.REPL_ID !== undefined

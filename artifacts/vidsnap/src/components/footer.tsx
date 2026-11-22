@@ -1,23 +1,28 @@
-import { Zap } from 'lucide-react';
+import { Logo } from './logo';
 
 const TOOL_LINKS = [
-  { label: '1080p Downloader', href: '#downloader' },
-  { label: 'Resolution Guide', href: '#resolution' },
-  { label: 'Features', href: '#features' },
-  { label: 'FAQ', href: '#faq' },
+  { label: 'YouTube 1080p Downloader', href: '/#downloader' },
+  { label: 'How to Download', href: '/#how-to-use' },
+  { label: 'Video Quality Guide', href: '/#resolution' },
+  { label: 'Features', href: '/#features' },
 ];
 
-const COMPANY_LINKS = [
-  { label: 'About', href: '#' },
-  { label: 'Tools', href: '#downloader' },
-  { label: 'Blog', href: '#' },
-  { label: 'Contact', href: '#' },
+const HELP_LINKS = [
+  { label: 'FAQ', href: '/#faq' },
+  { label: 'Why Full HD', href: '/#why-hd' },
+  { label: 'Use Cases', href: '/#use-cases' },
 ];
 
 const LEGAL_LINKS = [
-  { label: 'Privacy Policy', href: '#' },
-  { label: 'Terms & Conditions', href: '#' },
-  { label: 'Responsible Use', href: '#responsible' },
+  { label: 'Privacy Policy', href: '/privacy' },
+  { label: 'Terms of Use', href: '/terms' },
+  { label: 'Responsible Use', href: '/#responsible' },
+];
+
+const COLUMNS = [
+  { title: 'Downloader', links: TOOL_LINKS },
+  { title: 'Help', links: HELP_LINKS },
+  { title: 'Legal', links: LEGAL_LINKS },
 ];
 
 export function Footer() {
@@ -26,51 +31,31 @@ export function Footer() {
       <div className="container">
         <div className="footer-grid">
           <div className="footer-brand">
-            <a href="#downloader" className="logo">
-              <span className="logo-icon">
-                <Zap size={22} />
-              </span>
-              <span>HD Grab</span>
-            </a>
+            <Logo />
             <p>
-              HD Grab is a browser-based YouTube downloader focused on Full HD quality. Paste a URL
-              and access the best available 1080p video options instantly.
+              HD Grab is a free, browser-based YouTube video downloader. Paste a link to save videos
+              in 1080p Full HD, 720p, 4K or as MP3 audio, with real file sizes shown up front.
             </p>
           </div>
-          <div className="footer-col">
-            <h4>Download Tools</h4>
-            <ul>
-              {TOOL_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href}>{link.label}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h4>Quick Links</h4>
-            <ul>
-              {COMPANY_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href}>{link.label}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="footer-col">
-            <h4>Privacy &amp; Legal</h4>
-            <ul>
-              {LEGAL_LINKS.map((link) => (
-                <li key={link.label}>
-                  <a href={link.href}>{link.label}</a>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {COLUMNS.map((col) => (
+            <nav className="footer-col" key={col.title} aria-label={col.title}>
+              <p className="footer-col-title">{col.title}</p>
+              <ul>
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href}>{link.label}</a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
         </div>
         <div className="footer-bottom">
-          <span>© 2026 HD Grab. All rights reserved.</span>
-          <span>For personal use only · Respect creator rights and platform guidelines</span>
+          <span>© {new Date().getFullYear()} HD Grab. All rights reserved.</span>
+          <span>
+            HD Grab is not affiliated with YouTube or Google LLC. Download only content you have the
+            right to save.
+          </span>
         </div>
       </div>
     </footer>

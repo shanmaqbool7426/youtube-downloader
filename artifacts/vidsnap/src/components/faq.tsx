@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 
-const FAQ_ITEMS = [
+export const FAQ_ITEMS = [
   {
     q: 'Is this YouTube Video Downloader 1080p free?',
     a: 'Yes. Standard access is free and requires no paid subscription. You can process HD video links whenever you need.',
+  },
+  {
+    q: 'Can I download just the audio as MP3?',
+    a: 'Yes. After you paste a link, choose one of the MP3 options. HD Grab extracts the audio track at 320 kbps or 128 kbps, so you can save music, podcasts and lectures as audio only.',
   },
   {
     q: 'Why does the 1080p option sometimes not appear?',
