@@ -41,7 +41,13 @@ app.use(securityHeaders);
 // /api stays reachable on every host so health checks and in-flight calls keep working.
 if (env.canonicalHost) {
   app.use((req: Request, res: Response, next: NextFunction) => {
-    if (req.hostname === env.canonicalHost || req.path.startsWith("/api")) {
+    // www.<canonical> is served as-is: Render's custom-domain layer may itself
+    // redirect the apex to www, and redirecting www back would loop forever.
+    if (
+      req.hostname === env.canonicalHost ||
+      req.hostname === `www.${env.canonicalHost}` ||
+      req.path.startsWith("/api")
+    ) {
       next();
       return;
     }
