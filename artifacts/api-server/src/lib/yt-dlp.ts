@@ -159,11 +159,13 @@ export async function writeInfoFile(dir: string, infoJson: string): Promise<stri
 
 /** Spawn yt-dlp streaming one format (from a cached info file) to stdout. */
 export function spawnFormatToStdout(infoPath: string, format: string): StreamProc {
-  return spawn(
+  const proc = spawn(
     resolveBinaryPath(),
     [...speedArgs(), "--load-info-json", infoPath, "--format", format, "--output", "-"],
-    { stdio: ["ignore", "pipe", "ignore"], windowsHide: true },
+    { stdio: ["ignore", "pipe", "pipe"], windowsHide: true },
   );
+  trackStderr(proc);
+  return proc;
 }
 
 /**
@@ -195,9 +197,10 @@ export function spawnMuxToStdout(
   args.push("pipe:1");
 
   const ffmpeg = spawn(resolveFfmpegPath(), args, {
-    stdio: ["ignore", "pipe", "ignore", "pipe", "pipe"],
+    stdio: ["ignore", "pipe", "pipe", "pipe", "pipe"],
     windowsHide: true,
   });
+  trackStderr(ffmpeg);
   pipeInto(video, ffmpeg.stdio[3] as Writable);
   pipeInto(audio, ffmpeg.stdio[4] as Writable);
   return ffmpeg;
@@ -221,10 +224,25 @@ export function spawnMp3ToStdout(
       "-f", "mp3",
       "pipe:1",
     ],
-    { stdio: ["pipe", "pipe", "ignore"], windowsHide: true },
+    { stdio: ["pipe", "pipe", "pipe"], windowsHide: true },
   );
+  trackStderr(ffmpeg);
   pipeInto(audio, ffmpeg.stdin as Writable);
   return ffmpeg;
+}
+
+const stderrTails = new WeakMap<ChildProcess, string>();
+
+/** Keep the last ~2 KB of a process's stderr so failures can be logged. */
+function trackStderr(proc: ChildProcess): void {
+  proc.stderr?.on("data", (chunk: Buffer) => {
+    stderrTails.set(proc, ((stderrTails.get(proc) ?? "") + chunk.toString()).slice(-2000));
+  });
+}
+
+/** The captured stderr tail of a pipeline process (empty if none). */
+export function stderrTail(proc: ChildProcess): string {
+  return stderrTails.get(proc)?.trim() ?? "";
 }
 
 /** Pipe a producer's stdout into a consumer pipe, ignoring EPIPE on teardown. */

@@ -156,7 +156,9 @@ export function ResultsStep({
                         <a
                           className={`download-btn ${isSelected(fmt) ? 'selected' : ''}`}
                           href={downloadHref(fmt.formatId)}
-                          download
+                          // No `download` attribute: successful responses are
+                          // attachments anyway, and on failure the browser should
+                          // show the server's error page, not save it as a .txt.
                           onClick={(e) => {
                             // Don't let the row's select handler swallow the click.
                             e.stopPropagation();

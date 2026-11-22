@@ -18,6 +18,7 @@ import {
   spawnFormatToStdout,
   spawnMp3ToStdout,
   spawnMuxToStdout,
+  stderrTail,
   writeInfoFile,
   type RawFormat,
   type RawVideoInfo,
@@ -422,11 +423,17 @@ const STREAM_MIME: Record<string, string> = {
 
 function setDownloadHeaders(res: Response, filename: string, ext: string, length?: number): void {
   const safeName = sanitizeFilename(filename).replace(/["\\]/g, "");
+  // Header values must be Latin-1: Node throws on titles in Hindi/Urdu/emoji.
+  // The quoted filename gets an ASCII fallback; browsers use the RFC 5987
+  // filename* form, which carries the real (percent-encoded UTF-8) name.
+  const asciiName =
+    safeName.replace(/[^\x20-\x7e]+/g, "_").replace(/_+/g, "_").replace(/^[_ ]+/, "") ||
+    `download.${ext}`;
   res.status(200);
   res.setHeader("Content-Type", STREAM_MIME[ext] ?? "application/octet-stream");
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
+    `attachment; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(safeName)}`,
   );
   if (length != null && Number.isFinite(length) && length > 0) {
     res.setHeader("Content-Length", String(length));
@@ -564,9 +571,17 @@ async function runStreamingDownload(
     });
 
     stdout.once("data", (chunk: Buffer) => {
-      started = true;
       stdout.pause();
-      setDownloadHeaders(res, opts.filename, opts.ext, opts.length ?? undefined);
+      try {
+        setDownloadHeaders(res, opts.filename, opts.ext, opts.length ?? undefined);
+      } catch (err) {
+        // This runs in a stream event handler: an exception here would take
+        // the whole server down, so fail just this request instead.
+        req.log.error({ err }, "Could not set download headers");
+        killAll();
+        return;
+      }
+      started = true;
       res.write(chunk);
       stdout.pipe(res);
     });
@@ -576,15 +591,12 @@ async function runStreamingDownload(
     }
 
     output.on("close", (code) => {
+      const stderr = all.map(stderrTail).filter(Boolean);
       if (!started) {
-        req.log.error({ code, url: opts.url }, "Download pipeline produced no data");
-        if (!res.headersSent) {
-          res.status(500).json({
-            error: "Failed to download this format. Please process the video again.",
-          });
-        }
+        req.log.error({ code, url: opts.url, stderr }, "Download pipeline produced no data");
+        sendDownloadError(req, res, 500, "Failed to download this format. Please process the video again.");
       } else if (code && code !== 0 && !res.writableEnded) {
-        req.log.error({ code, url: opts.url }, "Download pipeline exited with an error");
+        req.log.error({ code, url: opts.url, stderr }, "Download pipeline exited with an error");
         res.destroy();
       }
       disarmWatchdog();
@@ -685,6 +697,32 @@ async function streamPlainDownload(
   });
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
+/**
+ * Error reply for GET /api/download. The SPA reaches this route by plain
+ * navigation, so a JSON body would be saved by the browser as a stray
+ * "download.txt"; browsers get a small HTML page instead, API clients JSON.
+ */
+function sendDownloadError(req: Request, res: Response, status: number, message: string): void {
+  if (res.headersSent) return;
+  res.status(status);
+  if (req.accepts(["json", "html"]) === "html") {
+    res.type("html").send(`<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Download failed · HD Grab</title>
+<style>body{font-family:Inter,system-ui,sans-serif;background:#f7f7f5;color:#18181b;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
+main{background:#fff;border:1px solid #e5e5e8;border-radius:16px;padding:28px;max-width:440px;text-align:center}
+h1{font-size:1.25rem;margin:0 0 8px}p{color:#63636b;margin:0 0 20px}
+a{display:inline-block;background:#e85d27;color:#fff;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:999px}</style>
+</head><body><main><h1>Download failed</h1><p>${escapeHtml(message)}</p>
+<a href="/">Go back</a></main></body></html>`);
+    return;
+  }
+  res.json({ error: message });
+}
+
 /**
  * GET /api/download?url=...&formatId=... — stream the actual media file to the
  * client. Every row type streams: plain formats straight from yt-dlp, merged
@@ -696,9 +734,7 @@ router.get("/download", async (req, res): Promise<void> => {
     typeof req.query.formatId === "string" ? req.query.formatId.trim() : "";
 
   if (!url || !formatId || !/^https?:\/\//i.test(url)) {
-    res.status(400).json({
-      error: "Missing required query params: url, formatId",
-    });
+    sendDownloadError(req, res, 400, "Missing required query params: url, formatId");
     return;
   }
 
@@ -708,7 +744,7 @@ router.get("/download", async (req, res): Promise<void> => {
     if (formatId.startsWith("video+audio:")) {
       const height = Number(formatId.split(":")[1]);
       if (!Number.isFinite(height) || height <= 0) {
-        res.status(400).json({ error: "Invalid format id" });
+        sendDownloadError(req, res, 400, "Invalid format id");
         return;
       }
       await streamMergedDownload(req, res, url, height, info);
@@ -718,7 +754,7 @@ router.get("/download", async (req, res): Promise<void> => {
     if (formatId.startsWith("mp3:")) {
       const bitrate = Number(formatId.slice("mp3:".length));
       if (!Number.isFinite(bitrate) || bitrate <= 0) {
-        res.status(400).json({ error: "Invalid format id" });
+        sendDownloadError(req, res, 400, "Invalid format id");
         return;
       }
       await streamMp3Download(req, res, url, bitrate, info);
@@ -728,19 +764,17 @@ router.get("/download", async (req, res): Promise<void> => {
     await streamPlainDownload(req, res, url, formatId, info);
   } catch (err) {
     if (err instanceof DownloadUnavailableError) {
-      if (!res.headersSent) {
-        res.status(400).json({ error: "This quality is no longer available. Please reprocess the video." });
-      }
+      sendDownloadError(req, res, 400, "This quality is no longer available. Please reprocess the video.");
       return;
     }
     if (err instanceof QueueTimeoutError) {
       res.setHeader("Retry-After", "5");
-      res.status(503).json({ error: "The download queue is busy. Please try again in a few seconds." });
+      sendDownloadError(req, res, 503, "The download queue is busy. Please try again in a few seconds.");
       return;
     }
     req.log.error({ err }, "Download failed");
     if (!res.headersSent) {
-      res.status(500).json({ error: "Failed to download this format. It may not be available anymore." });
+      sendDownloadError(req, res, 500, "Failed to download this format. It may not be available anymore.");
     } else if (!res.writableEnded) {
       res.destroy();
     }
