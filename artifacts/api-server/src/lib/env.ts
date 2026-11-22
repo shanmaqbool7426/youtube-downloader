@@ -49,19 +49,9 @@ export const env = {
    * IPs (Render, Railway, …) get "Failed to extract any player response" /
    * "confirm you're not a bot" without them. On Render, add a Secret File
    * named cookies.txt and set this to /etc/secrets/cookies.txt.
-   *
-   * An expired jar is worse than none: YouTube answers 403 to every client that
-   * receives it, and yt-dlp then skips the cookie-free clients. Lookups
-   * therefore retry without cookies as a last resort — but re-exporting the jar
-   * is what makes them fast again.
    */
   ytdlpCookiesFile: str("YTDLP_COOKIES_FILE", ""),
-  /**
-   * Raw --extractor-args value, e.g. "youtube:player_client=tv,web_safari".
-   * Used for the first extraction attempt only: if YouTube answers 403 the
-   * request is retried with yt-dlp's own client list (and then without these
-   * cookies), so a stale value here degrades instead of breaking lookups.
-   */
+  /** Raw --extractor-args value, e.g. "youtube:player_client=tv,web_safari". */
   ytdlpExtractorArgs: str("YTDLP_EXTRACTOR_ARGS", ""),
 
   /** General API rate limit (per IP). */
@@ -72,11 +62,9 @@ export const env = {
   heavyRateLimitWindowMs: num("HEAVY_RATE_LIMIT_WINDOW_MS", 60_000),
 
   /**
-   * Public hostname (e.g. "www.clipzap.net"). When set, page requests arriving
-   * on any other host (the apex, the *.onrender.com URL) get a 301 to it, so
-   * search engines only index one domain. Must match DEFAULT_SITE_URL in
-   * artifacts/vidsnap/scripts/seo-head.mjs, or canonical tags point elsewhere.
-   * Leave unset until DNS points at this server.
+   * Public hostname (e.g. "clipzap.net"). When set, page requests arriving on
+   * any other host (www., the *.onrender.com URL) get a 301 to it, so search
+   * engines only index one domain. Leave unset until DNS points at this server.
    */
   canonicalHost: str("CANONICAL_HOST", "").toLowerCase(),
 

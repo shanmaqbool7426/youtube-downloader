@@ -29,22 +29,20 @@ export const GetVideoInfoResponse = zod.object({
   "title": zod.string(),
   "thumbnail": zod.string().describe('Thumbnail URL'),
   "duration": zod.string().describe('Duration in HH:MM:SS or MM:SS format'),
-  "durationSeconds": zod.number().nullish().describe('Exact duration in seconds when the provider reports it, else null'),
   "platform": zod.string().describe('Platform name (YouTube, Instagram, etc.)'),
   "formats": zod.array(zod.object({
-  "formatId": zod.string().describe('yt-dlp format identifier, or synthetic ids video+audio:<height> \/ mp3:<bitrate> handled by the download endpoint'),
-  "type": zod.enum(['progressive', 'video', 'audio']).describe('progressive = one file with video AND audio; video = picture only, no sound; audio = sound only'),
-  "quality": zod.string().describe('Human-readable quality label, e.g. 1080p, 720p, 360p, MP3 · 320 kbps'),
+  "formatId": zod.string().describe('yt-dlp format identifier to request on download'),
+  "type": zod.string().describe('Stream type: progressive (video+audio), video (video only), or audio'),
+  "quality": zod.string().describe('Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a)'),
   "extension": zod.string().describe('Container extension, e.g. mp4, webm, m4a'),
-  "filesize": zod.number().nullish().describe('File size in bytes when known, otherwise null. Check sizeIsEstimate before showing it as exact.'),
-  "sizeIsEstimate": zod.boolean().optional().describe('True when filesize is derived (approx metadata, sum of merged streams, or a bitrate calculation) rather than an exact Content-Length. Absent means unknown provenance.'),
+  "filesize": zod.number().nullish().describe('Approximate file size in bytes, if known'),
   "filename": zod.string().optional().describe('Suggested file name including extension')
 }))
 })
 
 
 /**
- * Streams the selected format as a real media file (Content-Disposition attachment). Plain yt-dlp format ids pipe directly from the source; synthetic ids `video+audio:<height>` download the video and audio streams in parallel and mux them server-side into one file, and `mp3:<bitrate>` extracts MP3 audio (320/128).
+ * Streams the selected format as a real media file (Content-Disposition attachment). Works for DASH/HLS formats too.
  * @summary Download video file
  */
 export const GetDownloadFileQueryParams = zod.object({

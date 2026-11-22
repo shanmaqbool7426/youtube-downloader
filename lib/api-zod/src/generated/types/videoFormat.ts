@@ -5,21 +5,18 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { VideoFormatType } from './videoFormatType';
 
 export interface VideoFormat {
-  /** yt-dlp format identifier, or synthetic ids video+audio:<height> / mp3:<bitrate> handled by the download endpoint */
+  /** yt-dlp format identifier to request on download */
   formatId: string;
-  /** progressive = one file with video AND audio; video = picture only, no sound; audio = sound only */
-  type: VideoFormatType;
-  /** Human-readable quality label, e.g. 1080p, 720p, 360p, MP3 · 320 kbps */
+  /** Stream type: progressive (video+audio), video (video only), or audio */
+  type: string;
+  /** Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a) */
   quality: string;
   /** Container extension, e.g. mp4, webm, m4a */
   extension: string;
-  /** File size in bytes when known, otherwise null. Check sizeIsEstimate before showing it as exact. */
+  /** Approximate file size in bytes, if known */
   filesize?: number | null;
-  /** True when filesize is derived (approx metadata, sum of merged streams, or a bitrate calculation) rather than an exact Content-Length. Absent means unknown provenance. */
-  sizeIsEstimate?: boolean;
   /** Suggested file name including extension */
   filename?: string;
 }

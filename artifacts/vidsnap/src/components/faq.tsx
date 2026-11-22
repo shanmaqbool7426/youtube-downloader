@@ -3,40 +3,56 @@ import { ChevronDown } from 'lucide-react';
 
 export const FAQ_ITEMS = [
   {
-    q: 'Is ClipZap free, and do I need an account?',
-    a: 'It is free and needs no account. There is no sign-up, no app to install and no paid tier — you paste a link and pick a format.',
+    q: 'Is this YouTube Video Downloader 1080p free?',
+    a: 'Yes. Standard access is free and requires no paid subscription. You can process HD video links whenever you need.',
   },
   {
     q: 'Can I download just the audio as MP3?',
-    a: 'Yes. The Audio only group offers MP3 at 320 kbps or 128 kbps, plus the original M4A track. Those rows download no video at all.',
+    a: 'Yes. After you paste a link, choose one of the MP3 options. ClipZap extracts the audio track at 320 kbps or 128 kbps, so you can save music, podcasts and lectures as audio only.',
   },
   {
-    q: 'Why is 1080p missing for some videos?',
-    a: 'ClipZap only lists what YouTube returns for that link. If the upload itself is 720p, or the video is still processing, or the Full HD rendition is restricted, no 1080p file exists to fetch. The results panel says when 1080p is unavailable and why.',
+    q: 'Why does the 1080p option sometimes not appear?',
+    a: 'If the original video was uploaded to YouTube in 720p or lower, there is no 1080p version to download. We can only extract resolutions that actually exist on YouTube’s servers. In that case, 720p will be the best available option.',
   },
   {
-    q: 'Why did my downloaded video have no sound?',
-    a: 'YouTube stores 1080p and above as separate video and audio streams. Rows under More formats are the video stream on its own. Choose a row from Video with audio instead — those are assembled into one MP4 that includes sound.',
+    q: 'Why is the 1080p file missing audio?',
+    a: 'YouTube uses a technique called DASH, where it stores high-resolution video streams and the audio track as two separate files. Formats marked "Video Only" do not contain audio. Use the "Video + Audio" option from the list — ClipZap automatically combines the best video stream with the audio track into a single MP4 with sound.',
   },
   {
     q: 'Is 1080p 60fps supported?',
-    a: 'Yes. If the creator uploaded at 60 frames per second, the 1080p row keeps that frame rate, and the label shows it. Motion and fast action stay noticeably smoother.',
+    a: 'Yes. If the creator uploaded the video at 60 frames per second, the 1080p file will retain that smooth 60fps playback, making motion and fast content appear noticeably smoother.',
   },
   {
-    q: 'Are the file sizes exact?',
-    a: 'A plain number is the exact size YouTube reports. A number prefixed with “~” is an estimate: merged rows add the video and audio sizes together, and MP3 rows are calculated from the duration. The saved file is the same either way.',
+    q: 'Does HD increase file size significantly?',
+    a: 'Generally yes. A 10-minute 1080p video is typically around 300MB, compared to roughly 150MB for 720p. We recommend connecting to Wi-Fi before downloading Full HD videos on mobile.',
   },
   {
-    q: 'Why did my link fail to load?',
-    a: 'The message above the field names the reason. Private, deleted, members-only and age-restricted videos cannot be read at all. If the server was busy or the request timed out, the same link usually works on a second attempt — ClipZap offers Try again when retrying can help.',
+    q: 'Does 1080p always mean better quality?',
+    a: 'In most situations, Full HD provides noticeably clearer visuals compared to 720p and lower. However, if the source content was originally recorded or uploaded in lower quality, the improvement may be limited.',
   },
   {
-    q: 'Does it work on iPhone, Android, Windows and Mac?',
-    a: 'Yes, because everything runs in the browser. Files land in your browser’s download folder rather than in Photos, so the help page on finding downloads shows the exact path on each platform.',
+    q: 'Why choose 1080p instead of lower resolution?',
+    a: 'Because 1080p balances quality and storage effectively. It delivers excellent visual clarity without the massive file sizes of 4K, making it practical for everyday use on all modern devices.',
   },
   {
-    q: 'Is 1080p good enough for a large screen?',
-    a: 'For almost everyone, yes. Full HD looks sharp on laptops, tablets and TVs. On a very large 4K monitor some upscaling is visible, and the 4K row appears whenever YouTube offers one. Full HD also only helps if the source was recorded at that quality.',
+    q: 'Can I watch saved videos offline later?',
+    a: 'Yes. Once processed and saved to your device, the video can be watched offline at any time without requiring an internet connection.',
+  },
+  {
+    q: 'Is account creation required?',
+    a: 'No account is required for standard usage. Simply paste your YouTube URL and process it without signing up or logging in.',
+  },
+  {
+    q: 'Why is my video not processing?',
+    a: 'Possible reasons include an invalid URL, a temporary processing issue, an unsupported video source, or network interruptions. Try copying the URL again and ensure it points directly to a playable YouTube video.',
+  },
+  {
+    q: 'Does this work on Windows and Mac?',
+    a: 'Yes. Because the tool is entirely browser-based, it works on all operating systems including Windows, macOS, Linux, Android, and iOS without any software installation.',
+  },
+  {
+    q: 'Is 1080p enough for large displays?',
+    a: 'For most users, Full HD remains an excellent everyday resolution. On very large 4K displays some upscaling may occur, but 1080p still looks sharp and clear on the vast majority of screens.',
   },
 ];
 
@@ -47,10 +63,9 @@ export function Faq() {
     <section className="section section-alt" id="faq">
       <div className="container section-inner">
         <p className="eyebrow-section">Questions &amp; answers</p>
-        <h2 className="section-title">Frequently asked questions</h2>
+        <h2 className="section-title">Frequently Asked Questions (FAQ)</h2>
         <p className="section-lead">
-          Short answers to what people ask most. The troubleshooting section above links to the
-          longer explanations.
+          Common questions about our YouTube Video Downloader 1080p tool.
         </p>
         <div className="faq-list">
           {FAQ_ITEMS.map((item, index) => {

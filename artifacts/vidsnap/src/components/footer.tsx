@@ -1,16 +1,16 @@
 import { Logo } from './logo';
 
 const TOOL_LINKS = [
-  { label: 'YouTube 1080p downloader', href: '/#downloader' },
-  { label: 'How it works', href: '/#how-to-use' },
-  { label: 'Quality guide', href: '/#resolution' },
+  { label: 'YouTube 1080p Downloader', href: '/#downloader' },
+  { label: 'How to Download', href: '/#how-to-use' },
+  { label: 'Video Quality Guide', href: '/#resolution' },
+  { label: 'Features', href: '/#features' },
 ];
 
 const HELP_LINKS = [
-  { label: 'A video has no sound', href: '/help/missing-audio' },
-  { label: '1080p is not listed', href: '/help/missing-1080p' },
-  { label: 'Find the file on a phone', href: '/help/find-downloads' },
   { label: 'FAQ', href: '/#faq' },
+  { label: 'Why Full HD', href: '/#why-hd' },
+  { label: 'Use Cases', href: '/#use-cases' },
 ];
 
 const LEGAL_LINKS = [
@@ -33,8 +33,8 @@ export function Footer() {
           <div className="footer-brand">
             <Logo />
             <p>
-              ClipZap is a free, browser-based YouTube downloader. Paste a link to save videos in
-              1080p Full HD, 720p, 4K or as MP3 audio, with real file sizes shown up front.
+              ClipZap is a free, browser-based YouTube video downloader. Paste a link to save videos
+              in 1080p Full HD, 720p, 4K or as MP3 audio, with real file sizes shown up front.
             </p>
           </div>
           {COLUMNS.map((col) => (

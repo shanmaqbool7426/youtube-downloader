@@ -47,10 +47,6 @@ export function rateLimit(options: {
       (req as unknown as LoggedRequest).log?.warn?.({ limiter: name, ip }, "Rate limit exceeded");
       res.status(429).json({
         error: `Too many requests. Please wait ${retryAfter}s and try again.`,
-        // Same envelope as lib/errors.ts so the UI can switch on one shape.
-        code: "RATE_LIMITED",
-        retryable: true,
-        retryAfter,
       });
       return;
     }

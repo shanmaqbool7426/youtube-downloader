@@ -47,55 +47,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/VideoInfo"
         "400":
-          description: Malformed URL (INVALID_URL)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Video needs a signed-in account (SIGN_IN_REQUIRED)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Video deleted, private, or blocked in the server's region (VIDEO_UNAVAILABLE)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "422":
-          description: Link is not a single video (UNSUPPORTED_URL) or has no downloadable formats (NO_FORMATS)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "429":
-          description: Too many requests from this network (RATE_LIMITED)
+          description: Invalid URL or unsupported platform
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "500":
-          description: Unexpected server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "502":
-          description: Provider failed in an unrecognised way (PROVIDER_ERROR)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "503":
-          description: Provider refusing requests (PROVIDER_BLOCKED) or queue busy (QUEUE_BUSY)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "504":
-          description: Provider did not respond in time (TIMEOUT)
+          description: Server error
           content:
             application/json:
               schema:
@@ -215,24 +173,17 @@ components:
           description: "yt-dlp format identifier, or synthetic ids video+audio:<height> / mp3:<bitrate> handled by the download endpoint"
         type:
           type: string
-          description: "progressive = one file with video AND audio; video = picture only, no sound; audio = sound only"
-          enum:
-            - progressive
-            - video
-            - audio
+          description: "Stream type: progressive (video+audio), video (video only), or audio"
         quality:
           type: string
-          description: "Human-readable quality label, e.g. 1080p, 720p, 360p, MP3 · 320 kbps"
+          description: "Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a)"
         extension:
           type: string
           description: "Container extension, e.g. mp4, webm, m4a"
         filesize:
           type: number
           nullable: true
-          description: File size in bytes when known, otherwise null. Check sizeIsEstimate before showing it as exact.
-        sizeIsEstimate:
-          type: boolean
-          description: "True when filesize is derived (approx metadata, sum of merged streams, or a bitrate calculation) rather than an exact Content-Length. Absent means unknown provenance."
+          description: Approximate file size in bytes, if known
         filename:
           type: string
           description: Suggested file name including extension
@@ -253,10 +204,6 @@ components:
         duration:
           type: string
           description: Duration in HH:MM:SS or MM:SS format
-        durationSeconds:
-          type: number
-          nullable: true
-          description: Exact duration in seconds when the provider reports it, else null
         platform:
           type: string
           description: Platform name (YouTube, Instagram, etc.)
@@ -302,23 +249,5 @@ components:
       properties:
         error:
           type: string
-          description: Human-readable message that says what happened and what to do next
-        code:
-          type: string
-          description: Stable machine-readable reason the UI switches on
-          enum:
-            - INVALID_URL
-            - UNSUPPORTED_URL
-            - VIDEO_UNAVAILABLE
-            - SIGN_IN_REQUIRED
-            - PROVIDER_BLOCKED
-            - TIMEOUT
-            - RATE_LIMITED
-            - QUEUE_BUSY
-            - NO_FORMATS
-            - PROVIDER_ERROR
-        retryable:
-          type: boolean
-          description: Whether offering the same link again could plausibly succeed
       required:
         - error

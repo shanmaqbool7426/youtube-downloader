@@ -14,31 +14,17 @@ export interface VideoUrlInput {
   url: string;
 }
 
-/**
- * progressive = one file with video AND audio; video = picture only, no sound; audio = sound only
- */
-export type VideoFormatType = typeof VideoFormatType[keyof typeof VideoFormatType];
-
-
-export const VideoFormatType = {
-  progressive: 'progressive',
-  video: 'video',
-  audio: 'audio',
-} as const;
-
 export interface VideoFormat {
-  /** yt-dlp format identifier, or synthetic ids video+audio:<height> / mp3:<bitrate> handled by the download endpoint */
+  /** yt-dlp format identifier to request on download */
   formatId: string;
-  /** progressive = one file with video AND audio; video = picture only, no sound; audio = sound only */
-  type: VideoFormatType;
-  /** Human-readable quality label, e.g. 1080p, 720p, 360p, MP3 · 320 kbps */
+  /** Stream type: progressive (video+audio), video (video only), or audio */
+  type: string;
+  /** Human-readable quality label, e.g. 1080p, 720p, 360p, Audio (m4a) */
   quality: string;
   /** Container extension, e.g. mp4, webm, m4a */
   extension: string;
-  /** File size in bytes when known, otherwise null. Check sizeIsEstimate before showing it as exact. */
+  /** Approximate file size in bytes, if known */
   filesize?: number | null;
-  /** True when filesize is derived (approx metadata, sum of merged streams, or a bitrate calculation) rather than an exact Content-Length. Absent means unknown provenance. */
-  sizeIsEstimate?: boolean;
   /** Suggested file name including extension */
   filename?: string;
 }
@@ -49,8 +35,6 @@ export interface VideoInfo {
   thumbnail: string;
   /** Duration in HH:MM:SS or MM:SS format */
   duration: string;
-  /** Exact duration in seconds when the provider reports it, else null */
-  durationSeconds?: number | null;
   /** Platform name (YouTube, Instagram, etc.) */
   platform: string;
   formats: VideoFormat[];
@@ -70,32 +54,8 @@ export interface DownloadResult {
   filename: string;
 }
 
-/**
- * Stable machine-readable reason the UI switches on
- */
-export type ErrorResponseCode = typeof ErrorResponseCode[keyof typeof ErrorResponseCode];
-
-
-export const ErrorResponseCode = {
-  INVALID_URL: 'INVALID_URL',
-  UNSUPPORTED_URL: 'UNSUPPORTED_URL',
-  VIDEO_UNAVAILABLE: 'VIDEO_UNAVAILABLE',
-  SIGN_IN_REQUIRED: 'SIGN_IN_REQUIRED',
-  PROVIDER_BLOCKED: 'PROVIDER_BLOCKED',
-  TIMEOUT: 'TIMEOUT',
-  RATE_LIMITED: 'RATE_LIMITED',
-  QUEUE_BUSY: 'QUEUE_BUSY',
-  NO_FORMATS: 'NO_FORMATS',
-  PROVIDER_ERROR: 'PROVIDER_ERROR',
-} as const;
-
 export interface ErrorResponse {
-  /** Human-readable message that says what happened and what to do next */
   error: string;
-  /** Stable machine-readable reason the UI switches on */
-  code?: ErrorResponseCode;
-  /** Whether offering the same link again could plausibly succeed */
-  retryable?: boolean;
 }
 
 export type GetDownloadFileParams = {
@@ -104,7 +64,7 @@ export type GetDownloadFileParams = {
  */
 url: string;
 /**
- * yt-dlp format id from VideoInfo.formats[].formatId; synthetic ids video+audio:<height> and mp3:<bitrate> trigger server-side merge/transcode
+ * yt-dlp format id (from VideoInfo.formats[].formatId)
  */
 formatId: string;
 };

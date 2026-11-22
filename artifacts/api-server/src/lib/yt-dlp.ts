@@ -1,5 +1,4 @@
-import { spawn, execFile, type ChildProcess } from "node:child_process";
-import { promisify } from "node:util";
+import { spawn, type ChildProcess } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +8,6 @@ import { create as createYtDlp } from "yt-dlp-exec";
 import { env } from "./env";
 import { logger } from "./logger";
 import { acquireSlot } from "./concurrency";
-import { classifyLookupError, type ApiErrorCode } from "./errors";
 
 /** Flags the bundled yt-dlp type declaration doesn't know about. */
 type YtFlags = NonNullable<Parameters<ReturnType<typeof createYtDlp>>[1]>;
@@ -90,123 +88,34 @@ const cookiesPath = prepareCookiesFile();
 
 // Warnings are kept (no --no-warnings): when extraction fails they end up in
 // the logged error and usually name the real cause (bot check, sign-in, …).
-
-/**
- * One extraction attempt. YouTube's anti-bot state changes constantly: a player
- * client list that works today can answer 403 to every request tomorrow, and an
- * expired cookie jar turns every request into a 403 as well. The first variant
- * is exactly what this deployment is configured with; the rest are safer ones,
- * tried only when the failure is a provider block rather than a bad video.
- */
-interface FlagVariant {
-  label: string;
-  /** Per-request socket timeout, seconds. Shorter on fallbacks so the ladder fits. */
-  socketTimeout: number;
-  /** Let yt-dlp use its own maintained player-client list. */
-  ignoreExtractorArgs?: boolean;
-  /** Ignore the cookie jar (a stale jar is a reliable source of 403s). */
-  ignoreCookies?: boolean;
-}
-
-const ATTEMPTS: FlagVariant[] = [
-  { label: "configured", socketTimeout: 20 },
-  { label: "default clients", socketTimeout: 12, ignoreExtractorArgs: true },
-  {
-    label: "default clients, no cookies",
-    socketTimeout: 12,
-    ignoreExtractorArgs: true,
-    ignoreCookies: true,
-  },
-];
-
-function speedFlags(variant: FlagVariant): YtFlags {
-  return {
-    noCheckCertificate: true,
-    concurrentFragments: 8,
-    fragmentRetries: 10,
-    retries: 10,
-    socketTimeout: variant.socketTimeout,
-    httpChunkSize: "10M",
-    noPart: true,
-    ...(env.ytdlpImpersonate ? { impersonate: env.ytdlpImpersonate } : {}),
-    ...(env.ytdlpJsRuntime ? { jsRuntimes: env.ytdlpJsRuntime } : {}),
-    ...(!variant.ignoreCookies && cookiesPath ? { cookies: cookiesPath } : {}),
-    ...(!variant.ignoreExtractorArgs && env.ytdlpExtractorArgs
-      ? { extractorArgs: env.ytdlpExtractorArgs }
-      : {}),
-  } as unknown as YtFlags;
-}
-
-/** Configured flags, for work that reuses cached metadata (no extraction). */
-const SPEED_FLAGS = speedFlags(ATTEMPTS[0]!);
-
-/** Failures another attempt can plausibly fix. A private video cannot be retried. */
-const WORTH_RETRYING = new Set<ApiErrorCode>(["PROVIDER_BLOCKED", "PROVIDER_ERROR", "TIMEOUT"]);
-
-/** The tool's own message, which is where the real reason lives (not the argv). */
-function stderrOf(err: unknown): string {
-  const e = err as { stderr?: string; stdout?: string } | null;
-  return [e?.stderr, e?.stdout].filter(Boolean).join("\n").trim();
-}
-
-/**
- * Run an extraction, descending the attempt ladder on provider-level failures.
- *
- * The whole ladder has to fit inside INFO_TIMEOUT_MS, so each attempt gets the
- * remaining budget and a socket timeout short enough to give up in time.
- */
-async function extract<T>(
-  url: string,
-  run: (flags: YtFlags, timeoutMs: number) => Promise<T>,
-): Promise<T> {
-  const deadline = Date.now() + env.infoTimeoutMs;
-  let lastError: unknown;
-
-  for (const [index, variant] of ATTEMPTS.entries()) {
-    const remaining = deadline - Date.now();
-    // Leave enough room for one meaningful attempt; otherwise report the last error.
-    if (index > 0 && remaining < 6_000) break;
-
-    try {
-      return await run(speedFlags(variant), Math.max(remaining, 6_000));
-    } catch (err) {
-      lastError = err;
-      const failure = classifyLookupError(err);
-      if (index === ATTEMPTS.length - 1 || !WORTH_RETRYING.has(failure.code)) throw err;
-      logger.warn(
-        {
-          code: failure.code,
-          attempt: variant.label,
-          url,
-          stderr: stderrOf(err).slice(-400),
-        },
-        "yt-dlp extraction failed; retrying with a different client set",
-      );
-    }
-  }
-
-  throw lastError;
-}
+const SPEED_FLAGS = {
+  noCheckCertificate: true,
+  concurrentFragments: 8,
+  fragmentRetries: 10,
+  retries: 10,
+  socketTimeout: 30,
+  httpChunkSize: "10M",
+  noPart: true,
+  ...(env.ytdlpImpersonate ? { impersonate: env.ytdlpImpersonate } : {}),
+  ...(env.ytdlpJsRuntime ? { jsRuntimes: env.ytdlpJsRuntime } : {}),
+  ...(cookiesPath ? { cookies: cookiesPath } : {}),
+  ...(env.ytdlpExtractorArgs ? { extractorArgs: env.ytdlpExtractorArgs } : {}),
+} as unknown as YtFlags;
 
 /** Fetch the full metadata JSON for one video (bounded by a hard timeout). */
 export async function fetchRawInfo(url: string): Promise<RawVideoInfo> {
   const release = await acquireSlot();
   try {
-    return await extract(
-      url,
-      (flags, timeoutMs) =>
-        ytDlp(
-          url,
-          {
-            ...flags,
-            dumpSingleJson: true,
-            // URLs pasted from watch pages often carry a &list= parameter; treat
-            // them as the single video the user sees instead of dumping a playlist.
-            noPlaylist: true,
-          } as YtFlags,
-          { timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 },
-        ) as Promise<RawVideoInfo>,
-    );
+    return (await ytDlp(url, {
+      ...SPEED_FLAGS,
+      dumpSingleJson: true,
+      // URLs pasted from watch pages often carry a &list= parameter; treat
+      // them as the single video the user sees instead of dumping a playlist.
+      noPlaylist: true,
+    } as YtFlags, {
+      timeout: env.infoTimeoutMs,
+      maxBuffer: 64 * 1024 * 1024,
+    })) as RawVideoInfo;
   } finally {
     release();
   }
@@ -347,15 +256,14 @@ function pipeInto(producer: StreamProc, target: Writable): void {
 export async function resolveDirectUrl(url: string, formatId: string): Promise<string> {
   const release = await acquireSlot();
   try {
-    const result = await extract(
-      url,
-      (flags, timeoutMs) =>
-        ytDlp(
-          url,
-          { ...flags, getUrl: true, format: formatId } as YtFlags,
-          { timeout: timeoutMs, maxBuffer: 16 * 1024 * 1024 },
-        ) as Promise<unknown>,
-    );
+    const result = (await ytDlp(url, {
+      ...SPEED_FLAGS,
+      getUrl: true,
+      format: formatId,
+    } as YtFlags, {
+      timeout: env.infoTimeoutMs,
+      maxBuffer: 16 * 1024 * 1024,
+    })) as unknown as string;
     return String(result).trim().split("\n")[0] ?? "";
   } finally {
     release();
@@ -393,20 +301,3 @@ export function armStallWatchdog(
     proc.stdout?.off("data", onData);
   };
 }
-
-/**
- * Log the exact yt-dlp build once at startup.
- *
- * Extraction breakage is almost always version- or cookie-related, and "which
- * yt-dlp is this container actually running?" is the first question any
- * "Failed to extract any player response" asks. Answer it in the boot log.
- */
-void (async () => {
-  try {
-    const run = promisify(execFile);
-    const { stdout } = await run(resolveBinaryPath(), ["--version"], { timeout: 15_000 });
-    logger.info({ version: String(stdout).trim() }, "yt-dlp version");
-  } catch (err) {
-    logger.warn({ err }, "could not read the yt-dlp version");
-  }
-})();

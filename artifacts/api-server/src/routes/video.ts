@@ -11,8 +11,6 @@ import {
 } from "@workspace/api-zod";
 import { env } from "../lib/env";
 import { QueueTimeoutError, acquireSlot } from "../lib/concurrency";
-import { classifyLookupError, failure, type LookupFailure } from "../lib/errors";
-import { normalizeVideoUrl } from "../lib/yt-url";
 import {
   armStallWatchdog,
   fetchRawInfo,
@@ -34,7 +32,6 @@ interface DownloadFormat {
   quality: string;
   extension: string;
   filesize: number | null;
-  sizeIsEstimate: boolean;
   filename: string;
 }
 
@@ -42,7 +39,6 @@ interface VideoInfoPayload {
   title: string;
   thumbnail: string;
   duration: string;
-  durationSeconds: number | null;
   platform: string;
   formats: DownloadFormat[];
 }
@@ -133,18 +129,6 @@ function fileSizeOf(f: RawFormat): number | null {
   return f.filesize ?? f.filesize_approx ?? null;
 }
 
-/**
- * Whether a size came from exact metadata or was derived.
- *
- * yt-dlp reports `filesize` for some formats and only `filesize_approx` for
- * others; muxed and MP3 rows are computed. Measured against a real muxed file,
- * the merged sum ran 64 KB over the delivered bytes, so those rows must be
- * shown as estimates rather than as exact file sizes.
- */
-function sizeIsEstimateFor(f: RawFormat): boolean {
-  return f.filesize == null && f.filesize_approx != null;
-}
-
 /** Mark the -drc (downmix) twin formats as low priority */
 function isDrc(f: RawFormat): boolean {
   return String(f.format_id ?? "").includes("-drc");
@@ -195,7 +179,7 @@ function classifyFormat(f: RawFormat): Omit<DownloadFormat, "filename"> | null {
     quality = `Best audio (${extension})`;
   }
 
-  return { formatId, type, quality, extension, filesize, sizeIsEstimate: sizeIsEstimateFor(f) };
+  return { formatId, type, quality, extension, filesize };
 }
 
 interface MergedSelection {
@@ -258,9 +242,6 @@ function selectMergedStreams(raw: RawFormat[], height: number): MergedSelection 
 
   const videoSize = fileSizeOf(bestVideo);
   const audioSize = fileSizeOf(bestAudio);
-  // A muxed file is never byte-identical to the sum of its two source streams,
-  // so this is always an estimate (verified: 32,862,898 predicted vs 32,798,985
-  // delivered for Big Buck Bunny 144p).
   const filesize = videoSize != null && audioSize != null ? videoSize + audioSize : null;
 
   const quality =
@@ -330,7 +311,6 @@ function buildFormatList(
   // "Video + Audio" merged rows: one per available height (not just 1080/720),
   // downloaded as two parallel streams and muxed server-side into one file.
   const merged: Omit<DownloadFormat, "filename">[] = [];
-  const mergedHeights = new Set<number>();
   for (const height of heights) {
     const bucket = byHeight.get(height)!;
     if (!bucket.video) continue; // heights without a video-only stream already have a progressive row
@@ -342,21 +322,15 @@ function buildFormatList(
       quality: selection.quality,
       extension: selection.container,
       filesize: selection.filesize,
-      sizeIsEstimate: true,
     });
-    mergedHeights.add(height);
   }
 
   const base: Omit<DownloadFormat, "filename">[] = [];
   for (const height of heights) {
     const bucket = byHeight.get(height)!;
-    // A merged row already covers this height with a higher-bitrate video stream
-    // and the best audio, so drop the native mux. Listing both produced two rows
-    // with the same "MP4 · 360p · With audio" label and different sizes.
-    const progressive =
-      !mergedHeights.has(height) && bucket.progressive
-        ? classifyFormat(bucket.progressive)
-        : null;
+    const progressive = bucket.progressive
+      ? classifyFormat(bucket.progressive)
+      : null;
     const videoOnly = bucket.video ? classifyFormat(bucket.video) : null;
     if (progressive) base.push(progressive);
     if (videoOnly) base.push(videoOnly);
@@ -367,9 +341,7 @@ function buildFormatList(
     type: "audio",
     quality: `MP3 · ${option.bitrate} kbps`,
     extension: "mp3",
-    // duration x bytes-per-second at the encoder's target rate, not a real file.
     filesize: rawDuration ? Math.round(rawDuration * option.bytesPerSecond) : null,
-    sizeIsEstimate: true,
   }));
   if (bestAudio) {
     const audio = classifyFormat(bestAudio);
@@ -405,7 +377,6 @@ async function fetchVideoInfo(url: string): Promise<VideoInfoPayload> {
         title: info.title ?? "Unknown title",
         thumbnail: info.thumbnail ?? "",
         duration: info.duration ? formatDuration(info.duration) : "Unknown",
-        durationSeconds: info.duration ?? null,
         platform: detectPlatform(url),
         formats: buildFormatList(info.title ?? "Unknown title", info.formats ?? [], info.duration),
       };
@@ -469,75 +440,37 @@ function setDownloadHeaders(res: Response, filename: string, ext: string, length
   }
 }
 
-function sendFailure(res: Response, result: LookupFailure): void {
-  res.status(result.status).json({
-    error: result.message,
-    code: result.code,
-    retryable: result.retryable,
-  });
-}
-
 /** POST /api/info — get video metadata + real available formats */
 router.post("/info", async (req, res): Promise<void> => {
   const parsed = GetVideoInfoBody.safeParse(req.body);
   if (!parsed.success) {
-    sendFailure(res, failure("INVALID_URL"));
+    res.status(400).json({ error: "Invalid request body" });
     return;
   }
 
-  // Validate and canonicalise before spending a yt-dlp call. Every YouTube
-  // form (watch / youtu.be / Shorts / live / embed) collapses to one watch URL,
-  // which is also the cache key, so the same video never costs two extractions.
-  const normalized = normalizeVideoUrl(parsed.data.url);
-  if (!normalized.ok) {
-    sendFailure(
-      res,
-      failure(normalized.reason === "malformed" ? "INVALID_URL" : "UNSUPPORTED_URL"),
-    );
-    return;
-  }
-
-  const url = normalized.url;
+  const { url } = parsed.data;
 
   try {
     const data = await fetchVideoInfo(url);
-    if (data.formats.length === 0) {
-      sendFailure(res, failure("NO_FORMATS"));
-      return;
-    }
     const response = GetVideoInfoResponse.parse(data);
     res.json(response);
   } catch (err) {
-    const result = classifyLookupError(err);
-    // Real cause + provider stderr stay in the log; the user gets the mapped text.
-    req.log.error(
-      { err, url, code: result.code, retryable: result.retryable },
-      "Video info lookup failed",
-    );
-    sendFailure(res, result);
+    req.log.error({ err }, "Failed to fetch video info");
+    res.status(500).json({
+      error: "Failed to fetch video info. Make sure the URL is valid and the platform is supported.",
+    });
   }
 });
 
 /** POST /api/download — get a direct download URL for a specific format id */
 router.post("/download", async (req, res): Promise<void> => {
-  const parsedBody = GetDownloadLinkBody.safeParse(req.body);
-  if (!parsedBody.success) {
-    sendFailure(res, failure("INVALID_URL"));
+  const parsed = GetDownloadLinkBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body" });
     return;
   }
 
-  // Same canonical form as /info so the metadata cache key matches.
-  const normalized = normalizeVideoUrl(parsedBody.data.url);
-  if (!normalized.ok) {
-    sendFailure(
-      res,
-      failure(normalized.reason === "malformed" ? "INVALID_URL" : "UNSUPPORTED_URL"),
-    );
-    return;
-  }
-
-  const url = normalized.url;
-  const { formatId } = parsedBody.data;
+  const { url, formatId } = parsed.data;
 
   if (formatId.startsWith("video+audio:") || formatId.startsWith("mp3:")) {
     res.status(400).json({
@@ -549,7 +482,7 @@ router.post("/download", async (req, res): Promise<void> => {
   try {
     const downloadUrl = await resolveDirectUrl(url, formatId);
     if (!downloadUrl) {
-      sendFailure(res, failure("NO_FORMATS"));
+      res.status(500).json({ error: "Could not extract download URL" });
       return;
     }
 
@@ -561,9 +494,10 @@ router.post("/download", async (req, res): Promise<void> => {
     });
     res.json(response);
   } catch (err) {
-    const result = classifyLookupError(err);
-    req.log.error({ err, formatId, code: result.code }, "Failed to get download link");
-    sendFailure(res, result);
+    req.log.error({ err }, "Failed to get download link");
+    res.status(500).json({
+      error: "Failed to get download link. The format may not be available for this video.",
+    });
   }
 });
 
@@ -795,27 +729,14 @@ a{display:inline-block;background:#e85d27;color:#fff;text-decoration:none;font-w
  * rows through an on-the-fly ffmpeg copy-mux, MP3 rows through ffmpeg encode.
  */
 router.get("/download", async (req, res): Promise<void> => {
-  const rawUrl = typeof req.query.url === "string" ? req.query.url.trim() : "";
+  const url = typeof req.query.url === "string" ? req.query.url.trim() : "";
   const formatId =
     typeof req.query.formatId === "string" ? req.query.formatId.trim() : "";
 
-  if (!rawUrl || !formatId) {
+  if (!url || !formatId || !/^https?:\/\//i.test(url)) {
     sendDownloadError(req, res, 400, "Missing required query params: url, formatId");
     return;
   }
-
-  // Canonical form, identical to /info, so ensureInfo() hits the warm cache.
-  const normalized = normalizeVideoUrl(rawUrl);
-  if (!normalized.ok) {
-    sendDownloadError(
-      req,
-      res,
-      400,
-      "That link isn't a single video. Go back and paste the video's address.",
-    );
-    return;
-  }
-  const url = normalized.url;
 
   try {
     const info = await ensureInfo(url);
@@ -851,10 +772,9 @@ router.get("/download", async (req, res): Promise<void> => {
       sendDownloadError(req, res, 503, "The download queue is busy. Please try again in a few seconds.");
       return;
     }
-    const result = classifyLookupError(err);
-    req.log.error({ err, formatId, code: result.code }, "Download failed");
+    req.log.error({ err }, "Download failed");
     if (!res.headersSent) {
-      sendDownloadError(req, res, result.status, result.message);
+      sendDownloadError(req, res, 500, "Failed to download this format. It may not be available anymore.");
     } else if (!res.writableEnded) {
       res.destroy();
     }

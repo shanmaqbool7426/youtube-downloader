@@ -1,10 +1,6 @@
 // Shared by vite.config.ts (dev server) and prerender.mjs (production build).
 
-// The edge (Cloudflare/Render) treats www as the primary host and 301s the
-// apex to it, so www is the canonical host. Every canonical/OG/sitemap/JSON-LD
-// URL derives from this constant — pointing it at the apex would make all of
-// them point at a redirect.
-export const DEFAULT_SITE_URL = 'https://www.clipzap.net';
+export const DEFAULT_SITE_URL = 'https://clipzap.net';
 
 /** Public origin of the site, without a trailing slash. Override with SITE_URL at build time (e.g. for staging). */
 export function siteUrl() {
@@ -17,30 +13,6 @@ const escapeHtml = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
-
-/** "Privacy Policy | ClipZap" → "Privacy Policy", for breadcrumb labels. */
-function crumbLabel(title) {
-  return title.replace(/\s*\|\s*ClipZap$/, '');
-}
-
-/** Breadcrumb structured data: Home > this page. Mirrors the visible breadcrumb. */
-export function breadcrumbJsonLd(origin, page) {
-  const items = [
-    { name: 'ClipZap', url: `${origin}/` },
-    { name: crumbLabel(page.title), url: origin + page.path },
-  ];
-  const json = JSON.stringify({
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.name,
-      item: item.url,
-    })),
-  }).replace(/</g, '\\u003c');
-  return `<script type="application/ld+json">${json}</script>`;
-}
 
 /** Fill the __PLACEHOLDERS__ in index.html for one page. */
 export function fillHead(html, page, origin) {
